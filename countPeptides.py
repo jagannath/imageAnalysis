@@ -21,7 +21,7 @@ import math
 import subprocess
 import os.path
 
-def simplecount(c_std, a_std,imageFile):
+def simplecount(c_std, imageFile):
     image_list = [imageFile]
     c_std = float(c_std)
     if image_list[0][-3:] == 'tif':
@@ -54,7 +54,7 @@ def simplecount(c_std, a_std,imageFile):
 	[np.maximum(scipy.signal.correlate(image, correlation_matrix, mode='same'),
 		    np.zeros_like(image)).astype(np.int64)
 	for image in processed_images]
-    thresholded_images = [image > np.mean(image) + c_std * np.std(image) and images[i] > a_std  # Two changes done to Alexanders script
+    thresholded_images = [image > np.mean(image) + c_std * np.std(image)
 			for i,image in enumerate(processed_images)]
     for i, mask in enumerate(thresholded_images):
 	for (h, w), valid in np.ndenumerate(mask):

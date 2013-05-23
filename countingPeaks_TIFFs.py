@@ -12,6 +12,7 @@ I have extended the script to now include counting peptides in files within a di
 import numpy as np
 import os.path
 import countPeptides
+#import countPeptides_astd
 import fnmatch
 import csv
 import collections
@@ -77,14 +78,15 @@ def main():
     
     
 if __name__ == '__main__':
-    ARG = 'BATCH'
+    #ARG = 'BATCH'
     #ARG = 'TIMETRACES'
-    #ARG = 'TEST'
+    ARG = sys.argv[1:]
+    ARG = 'TEST'
     if ARG == 'TIMETRACES':
-	fID = "AS-N2CuredCy5Dye_TimeTraceFiles"
-	DIR = "/project2/marcotte/jaggu/microscopeFiles/2013-05-20/"+fID
+	fID = "AS-HeatCured2_Cy5Dye_TimeTraceFiles"
+	DIR = "/project2/marcotte/jaggu/microscopeFiles/2013-05-22/"+fID
     elif ARG == 'BATCH':
-	dateStamp = '2013-05-20'
+	dateStamp = '2013-05-22'
 	DIR = "/project2/marcotte/jaggu/microscopeFiles/" + dateStamp + '/'
     elif ARG == 'TEST':
 	fname = 'photobleaching005t716.tif'
