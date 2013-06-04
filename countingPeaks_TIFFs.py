@@ -12,7 +12,7 @@ I have extended the script to now include counting peptides in files within a di
 import numpy as np
 import os.path
 import countPeptides
-#import countPeptides_astd
+#import countPeptides_astd as countPeptides
 import fnmatch
 import csv
 import collections
@@ -33,7 +33,7 @@ def locate(pattern, root=os.curdir):
 def timeTraceExpts():
     allCounts = list()
     allTIFFs = locate('*.tif',DIR)
-    outfile = DIR+'/'+fID+'_WashBuffer'+str(THRESHOLD)+'.csv'
+    outfile = DIR+'/'+dateStamp +'_' + fID+'_WashBuffer_'+str(THRESHOLD)+'.csv'
     for f in allTIFFs:
 	count = countPeptides.simplecount(THRESHOLD,f)
 	name = f.replace('/project2/marcotte/jaggu/microscopeFiles','')
@@ -45,25 +45,28 @@ def timeTraceExpts():
 	    arrayExpts[exptNbr,replicate] = int(count)
 
     np.savetxt(outfile,arrayExpts,fmt='%d',delimiter='\t')
-
+    dest = '/project2/marcotte/jaggu/dataAnalysis/2013-May'
+    shutil.copy(outfile,dest)
+         
 def batchAnalysis():
-    # This function looks through all the TIFF images in the directory and produces a txt file with fname : Peptide count
+    # This function looks through all the TIFF ured_UTJJ1200pM_TimeTraceFiles
     allTIFFs = locate('*.tif',DIR)
     outfile = DIR+dateStamp+'_PeptideCounts.txt'
     ofile = open(outfile,'w')
     ofile.write('FILE \t COUNTS \n')
     for f in allTIFFs:
 	if not (re.findall(r'expt',f) or re.findall(r'Trace',f) or re.findall(r'Time',f) or re.findall(r'trace',f)):
-	    print "Processing : %s"%f
 	    count = countPeptides.simplecount(THRESHOLD,f)
+	    print "Processing %s: Counts = %d"%(f,count)        
 	    ofile.write(f+'\t'+str(count)+'\n')
-    
+            
+    ofile.close()
     dest = '/project2/marcotte/jaggu/dataAnalysis/2013-May'
-    shutil(outfile,dest)
+    shutil.copy(outfile,dest)
     
     
 def test():
-    count = countPeptides.simplecount(THRESHOLD,fname)
+    count = countPeptides.simplecount(THRESHOLD,2,fname)
     assert count == 385
     
 
@@ -72,22 +75,21 @@ def main():
     elif ARG == 'TIMETRACES': timeTraceExpts()
     elif ARG == 'TEST':test()
     else:
-	print "Incorrect Argument"
-    
-    
+	print "Incorrect Argument- TEST, BATCH or TIMETRACES with appropriate directory and file indicated"
     
     
 if __name__ == '__main__':
     #ARG = 'BATCH'
     #ARG = 'TIMETRACES'
-    ARG = sys.argv[1:]
-    ARG = 'TEST'
+    [ARG] = sys.argv[1:]
+    #ARG = 'TEST'
     if ARG == 'TIMETRACES':
-	fID = "AS-HeatCured2_Cy5Dye_TimeTraceFiles"
-	DIR = "/project2/marcotte/jaggu/microscopeFiles/2013-05-22/"+fID
+	dateStamp = '2013-05-20'
+        fID = "AS-N2CuredCy5Dye_TimeTraceFiles"
+	DIR = "/project2/marcotte/boulgakov/microscope/2013-May/"+dateStamp+"/"+fID
     elif ARG == 'BATCH':
-	dateStamp = '2013-05-22'
-	DIR = "/project2/marcotte/jaggu/microscopeFiles/" + dateStamp + '/'
+	dateStamp = '2013-05-23'
+	DIR = "/project2/marcotte/boulgakov/microscope/2013-May/" + dateStamp + '/'
     elif ARG == 'TEST':
 	fname = 'photobleaching005t716.tif'
     
