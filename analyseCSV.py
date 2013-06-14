@@ -11,6 +11,7 @@ I have extended the script to now include counting peptides in files within a di
 
 import numpy as np
 import os.path
+import os
 import fnmatch
 import csv
 import collections
@@ -18,6 +19,8 @@ import time
 import re
 import shutil
 import sys
+from random import choice
+from subprocess import call
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and below
@@ -33,7 +36,7 @@ def getCountRow(f):
     ifile = open(f,'r')
     row = ifile.readlines()[1] # This is typically the important line; The first is the header
     ifile.close()
-    return row.split(',')
+    return row.split('\t') # In earlier algorithms it was ',' as a delimiter
 
 def writeTimeCSV(fname,timeDICT):
     '''The Dict has Expt number, replicates, counts and SNR. Outputing a csv file '''
@@ -79,53 +82,85 @@ def didIgnore(f,ignoreList):
 	if re.findall(ig,f):flag = False
     return flag
 
-def batchAnalysis(dateStamp,DIR):
+def convertPNG(dateStamp,mthName,DIR):
+    ''' This converts one random tif file in the directory to a png and copies this to the analyse Directory '''
+    allDIRs = collections.defaultdict(list)
+    analyseDir = '/project2/marcotte/jaggu/dataAnalysis/2013-'+mthName + '/' + dateStamp 
+    if not os.path.exists(analyseDir): os.makedirs(analyseDir)
+    allTIFs = locate('*.tif',DIR)
+    convertList = list()
+    for f in allTIFs:
+	dirs = f.split('/')[-2]
+        allDIRs[dirs].append(f)
+    
+    convertList = [choice(flist) for dirs,flist in  allDIRs.items()]
+    
+    for f in convertList:
+	destFile = analyseDir + '/' + f.split('/')[-1]+'.png' #Just the file name in the destination dir
+	print destFile
+	command = "convert -contrast-stretch 0.15x0.05% "+f+" "+destFile
+        call(command.split(),shell=False)
+
+def batchAnalysis(dateStamp,mthName,DIR):
     ''' The Batch analysis is done per directory given. It has an ignore list - time traces, expts (which is for timeTrace one) and then outputs a single csv file     
     '''
     allCSVs = locate('peak*.csv',DIR)
+    allSubDir = collections.defaultdict(list)
+    analyseDir = '/project2/marcotte/jaggu/dataAnalysis/2013-'+mthName + '/' + dateStamp 
+    analyseDir2 ="project/marcotte/jagannath/projectfiles/Single Molecule Microscopy/dataAnalysis/2013-"+mthName+'/'+dateStamp
+    map(lambda DIR: DIR if os.path.exists(DIR) else os.makedirs(DIR),[analyseDir,analyseDir2]) #Make two analysis Directory. 
     ignoreList = ["expt","Trace","Time","trace","time","aaron"]
     outfile = DIR+dateStamp+'_peptideCounts_AUTO.txt'
     ofile = open(outfile,'w')
-#    ofile.write('FILE \t COUNTS \n')
+    ofile.write('FILE \t COUNTS \n')
     for f in allCSVs:
 	if didIgnore(f,ignoreList):
             ofile.write(open(f,'r').read())
-         
+
     ofile.close()
-    dest1 = '/project2/marcotte/jaggu/dataAnalysis/2013-May'   
-    dest2 = DIR + 'analysis'                                     
-    map(lambda dest: shutil.copy(outfile,dest),[dest1,dest2])
+    dest1 = analyseDir 
+    dest2 = DIR + 'analysis'                                    
+    dest3 = analyseDir2
+    map(lambda dest: shutil.copy(outfile,dest),[dest1,dest2,dest3])
 
 def test():
     count = countPeptides.simplecount(THRESHOLD,2,fname)
     assert count == 385
 
 def main(dateStamp,ARG):
+    monthName = {'01':'Jan','02':'Feb','03':'March','04':'April','05':'May','06':'June'}
+    month = dateStamp.split('-')[1]
     if ARG == 'TIMETRACES':
-    	DIR = "/project2/marcotte/boulgakov/microscope/2013-May/"+dateStamp+"/"
+    	DIR = "/project2/marcotte/boulgakov/microscope/2013-"+monthName[month]+"/"+dateStamp+"/"
         fID = findFolder('TimeTraceFiles',DIR)+"/"
         timeTraceExpts(dateStamp,DIR,fID)
     elif ARG == 'BATCH':
-        DIR = "/project2/marcotte/boulgakov/microscope/2013-May/" + dateStamp + '/'
-        batchAnalysis(dateStamp,DIR)
+        DIR = "/project2/marcotte/boulgakov/microscope/2013-"+monthName[month]+"/" + dateStamp + '/'
+        batchAnalysis(dateStamp,monthName[month],DIR)
+        convertPNG(dateStamp,monthName[month],DIR)
     elif ARG == 'TEST':
 	fname = 'photobleaching005t716.tif'
         test()
-    print "Incorrect Argument- TEST, BATCH or TIMETRACES with appropriate dateStamp indicated"
+    else: print invalidArg()
    
 def findFolder(pattern,DIR):
+    '''This expects only one folder '''
     allDir = os.listdir(DIR) 
     for d in allDir:
 	if re.findall(pattern,d):
 	    return d
+
+def invalidArg():
+    return "Incorrect Argument : python analyseCSV.py [dateStamp in format yyyy-mm-dd] [BATCH,TIMETRACE or TEST]"
     
 if __name__ == '__main__': 
     #ARG = 'BATCH'
     #ARG = 'TIMETRACES'
     #ARG = 'TEST'
-    [dateStamp,ARG] = sys.argv[1:]
+    try: [dateStamp,ARG] = sys.argv[1:]
+    except NameError or ValueError: print invalidArg()
     try: assert re.match(r"\d{4}-\d{2}-\d{2}$",dateStamp) and ARG in ['BATCH','TIMETRACES','TEST']
-    except AssertionError: print "Incorrect ARGUMENT : [yyyy-mm-dd] [BATCH,TIMETRACES,TEST]"
+    except AssertionError: print invalidArg()
 
     t0 = time.clock()
     main(dateStamp,ARG)
