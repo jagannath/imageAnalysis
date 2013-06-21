@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /home/jaggu/anaconda/bin/python2.7
 
 # AUTHOR : Jagannath S; 8th May 2013
 
@@ -53,7 +53,7 @@ def writeTimeCSV(fname,timeDICT):
         writer.writerow(row)
     ofile.close()
 
-def timeTraceExpts(dateStamp,DIR,fID):
+def timeTraceExpts(dateStamp,mthName,DIR,fID,analyseDir):
     '''The Time trace directory is indicated. It runs through all the CSV computed earlier beginning as peak*.csv (1 per directory). It then retrieves the counts and the SNR and produces a final csv file        with the details of all the time trace expts. '''
     allCounts = list()
     allCSVs = locate('peak*.csv',DIR+fID)
@@ -70,23 +70,34 @@ def timeTraceExpts(dateStamp,DIR,fID):
         allCounts.append((exptNbr,name,count))
 	timeDICT[exptNbr].append([replicate,[count,snr]])
     writeTimeCSV(outfile,timeDICT)        
-    dest1 = '/project2/marcotte/jaggu/dataAnalysis/2013-May'
-    dest2 = DIR + 'analysis'
-    map(lambda dest: shutil.copy(outfile,dest),[dest1,dest2])
+    shutil.copy(outfile,analyseDir)
 
 ''' BATCH EXPERIMENTS '''
-         
 def didIgnore(f,ignoreList):
     flag = True
     for ig in ignoreList:
 	if re.findall(ig,f):flag = False
     return flag
 
-def convertPNG(dateStamp,mthName,DIR):
+def duplicateDir(src,target):
+    import shutil, errno
+    try:
+	shutil.copytree(src, target)
+        # Depend what you need here to catch the problem
+    except OSError as exc: 
+        # File already exist
+        if exc.errno == errno.EEXIST:
+            shutil.copy(src, target)
+        # The dirtory does not exist
+        if exc.errno == errno.ENOENT:
+            shutil.copy(src, target)
+        else:
+            raiseshutil.copytree(src,target)
+
+def convertPNG(dateStamp,mthName,DIR,analyseDir):
     ''' This converts one random tif file in the directory to a png and copies this to the analyse Directory '''
     allDIRs = collections.defaultdict(list)
-    analyseDir = '/project2/marcotte/jaggu/dataAnalysis/2013-'+mthName + '/' + dateStamp 
-    if not os.path.exists(analyseDir): os.makedirs(analyseDir)
+    if not os.path.exists(analyseDir) : os.makedirs(analyseDir)#Make two analysis Directory. 
     allTIFs = locate('*.tif',DIR)
     convertList = list()
     for f in allTIFs:
@@ -101,14 +112,11 @@ def convertPNG(dateStamp,mthName,DIR):
 	command = "convert -contrast-stretch 0.15x0.05% "+f+" "+destFile
         call(command.split(),shell=False)
 
-def batchAnalysis(dateStamp,mthName,DIR):
+def batchAnalysis(dateStamp,mthName,DIR,analyseDir):
     ''' The Batch analysis is done per directory given. It has an ignore list - time traces, expts (which is for timeTrace one) and then outputs a single csv file     
     '''
     allCSVs = locate('peak*.csv',DIR)
     allSubDir = collections.defaultdict(list)
-    analyseDir = '/project2/marcotte/jaggu/dataAnalysis/2013-'+mthName + '/' + dateStamp 
-    analyseDir2 ="project/marcotte/jagannath/projectfiles/Single Molecule Microscopy/dataAnalysis/2013-"+mthName+'/'+dateStamp
-    map(lambda DIR: DIR if os.path.exists(DIR) else os.makedirs(DIR),[analyseDir,analyseDir2]) #Make two analysis Directory. 
     ignoreList = ["expt","Trace","Time","trace","time","aaron"]
     outfile = DIR+dateStamp+'_peptideCounts_AUTO.txt'
     ofile = open(outfile,'w')
@@ -116,12 +124,8 @@ def batchAnalysis(dateStamp,mthName,DIR):
     for f in allCSVs:
 	if didIgnore(f,ignoreList):
             ofile.write(open(f,'r').read())
-
     ofile.close()
-    dest1 = analyseDir 
-    dest2 = DIR + 'analysis'                                    
-    dest3 = analyseDir2
-    map(lambda dest: shutil.copy(outfile,dest),[dest1,dest2,dest3])
+    shutil.copy(outfile,analyseDir)
 
 def test():
     count = countPeptides.simplecount(THRESHOLD,2,fname)
@@ -130,14 +134,22 @@ def test():
 def main(dateStamp,ARG):
     monthName = {'01':'Jan','02':'Feb','03':'March','04':'April','05':'May','06':'June'}
     month = dateStamp.split('-')[1]
+    analyseDir = '/project2/marcotte/jaggu/dataAnalysis/2013-'+monthName[month] + '/' + dateStamp 
+    analyseDir2 ="/project/marcotte/jagannath/projectfiles/SingleMoleculeMicroscopy/dataAnalysis/2013-"+monthName[month]
+    if not os.path.exists(analyseDir) : os.makedirs(analyseDir)#Make an analysis directory. This is in project2. 
     if ARG == 'TIMETRACES':
     	DIR = "/project2/marcotte/boulgakov/microscope/2013-"+monthName[month]+"/"+dateStamp+"/"
         fID = findFolder('TimeTraceFiles',DIR)+"/"
-        timeTraceExpts(dateStamp,DIR,fID)
+        timeTraceExpts(dateStamp,monthName[month],DIR,fID,analyseDir)
     elif ARG == 'BATCH':
         DIR = "/project2/marcotte/boulgakov/microscope/2013-"+monthName[month]+"/" + dateStamp + '/'
-        batchAnalysis(dateStamp,monthName[month],DIR)
-        convertPNG(dateStamp,monthName[month],DIR)
+        batchAnalysis(dateStamp,monthName[month],DIR,analyseDir)
+        convertPNG(dateStamp,monthName[month],DIR,analyseDir)
+    elif ARG == 'PNGS': #only converting picture files
+        DIR = "/project2/marcotte/boulgakov/microscope/2013-"+monthName[month]+"/" + dateStamp + '/'    
+	convertPNG(dateStamp,monthName[month],DIR)
+    elif ARG == 'DUPLICATE':
+	duplicateDir(analyseDir,analyseDir2)
     elif ARG == 'TEST':
 	fname = 'photobleaching005t716.tif'
         test()
@@ -159,7 +171,7 @@ if __name__ == '__main__':
     #ARG = 'TEST'
     try: [dateStamp,ARG] = sys.argv[1:]
     except NameError or ValueError: print invalidArg()
-    try: assert re.match(r"\d{4}-\d{2}-\d{2}$",dateStamp) and ARG in ['BATCH','TIMETRACES','TEST']
+    try: assert re.match(r"\d{4}-\d{2}-\d{2}$",dateStamp) and ARG in ['BATCH','TIMETRACES','TEST','PNGS','DUPLICATE']
     except AssertionError: print invalidArg()
 
     t0 = time.clock()
