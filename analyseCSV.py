@@ -22,7 +22,7 @@ import time
 import re
 import shutil
 import sys
-from random import choice
+from random import sample, choice
 from subprocess import call
 
 def locate(pattern, root=os.curdir):
@@ -34,57 +34,73 @@ def locate(pattern, root=os.curdir):
     return allFiles
 
 class Date(object):
-    def __init__(self,dateStamp):
+    def __init__(self,dateStamp,default=True):
         self.dateStamp = dateStamp
         self.month = self.month(dateStamp)
-        self.DIR = "/project2/marcotte/boulgakov/microscope/2013-"+self.month+"/"+self.dateStamp
-        self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/2013-"+self.month+"/"+self.dateStamp
+        self.year = self.dateStamp[0:4]
+        if default: 
+            self.DIR = "/project2/marcotte/boulgakov/microscope/"+self.year+"-"+self.month+"/"+self.dateStamp
+            self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/"+self.year+"-"+self.month+"/"+self.dateStamp
+        else:
+            self.DIR = "/project2/marcotte/boulgakov/microscope/PACJ_walker/2013-"+self.month+"/"+self.dateStamp
+            self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/PACJ_walker/2013-"+self.month+"/"+self.dateStamp
         self.checkDir(inputD = self.DIR,outputD = [self.analyseDIR]) #There can be many more analyseDir
     def month(self,dateStamp):
-        monthName = {'01':'Jan','02':'Feb','03':'March','04':'April','05':'May','06':'June'}
+        monthName = \
+                {'01':'Jan','02':'Feb','03':'Mar','04':'April','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec','04':'Apr'}
         return monthName[dateStamp.split('-')[1]]
     def checkDir(self,**kwargs):
         if not os.path.exists(kwargs['inputD']): raise SystemExit("Input Directory doesn't exist")
         [os.makedirs(d) for d in kwargs['outputD'] if not os.path.exists(d)]
 
 class Batch(Date):
+    '''Handles the data within the dateStamp folder. It has an ignore  '''
     def __init__(self,dateStamp):
-        Date.__init__(self,dateStamp)
+        Date.__init__(self,dateStamp,default=option)
         self.output = str()
-    def ignored(self,f,ignoreList):                     
-        for ig in ignoreList:            
-            if re.findall(ig,f): return True 
-        return False                       
     def analyse(self):
-        allCSVs = locate('peak*.csv',self.DIR)
+        allCSVs = locate('*SUMMARY.csv',self.DIR)
         ignoreList = ["expt","Trace","Time","trace","time","aaron","stitch"]
+        def ignored(f):                     
+            for ig in ignoreList:            
+                if re.findall(ig,f): return True 
+            return False                       
         for fname in allCSVs:
-            if not self.ignored(fname,ignoreList):
-                with open(fname,'r') as f: self.output = f.read()
+            if not ignored(fname):
+                with open(fname,'r') as f: self.output += f.read()
         return self.output
     def writeCSV(self):
         fname = self.analyseDIR+"/"+self.dateStamp+".Counts.csv"
         with open(fname,'w') as f: f.write(self.output)
         return fname
+    def generateImages(self):
+        image = Image(self.dateStamp)
+        print self.DIR
+        print "in images"
+        image.convertPNG(dir=self.DIR,expt='BATCH')
 
 class TimeTrace(Date):
+    '''Handles the Time trace data when images were gathered at random positions
+    at a given time interval. Needs a dateStamp as argument. Functions are
+    analyse, writeCSV and generateImages '''
     def __init__(self,dateStamp):
         Date.__init__(self,dateStamp) 
     def findFolders(self,pattern):
         timeTraceFolders = [self.DIR+'/'+d for d in os.listdir(self.DIR) if re.findall(pattern,d)]
         return timeTraceFolders
     def analyse(self,d):#Analyses only one timeTrace folder                    
-        allCSVs = locate('peak*.csv',d)
+        self.traceDIR = d
+        allCSVs = locate('peak*.csv',self.traceDIR)
         self.timeTraceDICT = collections.defaultdict(list)
         def getRow(fname):
             with open(fname) as f:
                 return f.readlines()[1]
         for f in allCSVs:
             row = getRow(f).split('\t')
-            name = row[0]
+            name = row[1]
             exptNbr = int(name.split('/')[-3]) #This is name of the directory above the place where the nd2 file was saved or two levels above tif file
             replicate = int(name.split('/')[-1].split('_')[-1].split('.')[0])
-            count = int(row[1])
+            count = int(row[2])
             self.timeTraceDICT[exptNbr].append([replicate,count])
         return self.timeTraceDICT
     def writeCSV(self):
@@ -101,58 +117,116 @@ class TimeTrace(Date):
                 row.extend([count[1] for count in countList])
                 writer.writerow(row)
         return fname
+    def generateImages(self):
+        image = Image(self.dateStamp)
+        image.convertPNG(dir=self.traceDIR,expt='TIMETRACE')
 
-class Image(Date):
+class Trace(Date):
     def __init__(self,dateStamp):
         Date.__init__(self,dateStamp)
+        self.output = str()
+    def getTrace(self):
+        allFiles = locate("*SUMMARY.csv",self.DIR)
+        allPbleachFiles = [f for f in allFiles if 'trace' in f]
+        for fname in allPbleachFiles:
+            with open(fname,'r') as f: self.output += f.read() 
+    def writeCSV(self):
+        fname = self.analyseDIR+"/"+self.dateStamp+".Counts.trace.csv"
+        with open(fname,'w') as f: f.write(self.output)
+        return fname
+
+
+class Channels(Date):
+    def __init__(self,dateStamp):
+        Date.__init__(self,dateStamp)
+    def getCounts(self):
+        allFrameFiles = locate("*FRAME*CHANNEL COMPARISON.csv",self.DIR)
+        ofname = self.analyseDIR+"/"+self.dateStamp+".Channels.Counts.csv"
+        ofile = open(ofname,'a')
+        ofile.write('FileName\tChannel-1 Counts\tChannel-2 Counts\tBothChannels Counts\n')
+
+        def _getLines(fname):
+            with open(fname) as f:
+                lines = f.readlines()[1:]
+            return lines
+
+        for fname in allFrameFiles:
+            lines = _getLines(fname)
+            ch1Count, ch2Count, chBothCount = 0, 0, 0
+            for line in lines:
+                ch1Status, ch2Status = line.split('\t')[2],line.split('\t')[16]
+                if ch1Status == "Not Available": ch2Count += 1
+                elif ch2Status == "Not Available": ch1Count +=1
+                else: chBothCount +=1
+            ofile.write(fname+'\t'+str(ch1Count)+'\t'+str(ch2Count)+'\t'+str(chBothCount)+'\n')
+
+        ofile.close()
+    
+
+
+class Image(Date):
+    '''Handles Images. Currently the main function is to convert the tif file to
+    a png of an appropriate format.'''
+    def __init__(self,dateStamp):
+        Date.__init__(self,dateStamp,default=option)
     def __call__(self):
         convertPNG()
-    def convertPNG(self):
+    def convertPNG(self,dir,expt='BATCH'):
         ''' This converts one random tif file in the directory to a png
         according to specifications '''
         DIRS = collections.defaultdict(list)
-        allTIFs = locate('*.tif',self.DIR)
+        allTIFs = locate('*.tif',dir)
         [DIRS[f.split('/')[-2]].append(f) for f in allTIFs]
         convertList = [choice(flist) for flist in DIRS.values()]
+        if expt=='TIMETRACE':convertList = sample(convertList,5)
+        if expt=='BATCH': convertList = [im for im in convertList if not ('TimeTraceFiles' in im or 'stitch' in im)]
         for f in convertList: 
             destFile = self.analyseDIR+'/'+f.split('/')[-1]+'.png'
             cmd = "convert -contrast-stretch 0.15x0.05% "+f+" "+destFile
             print destFile
             call(cmd.split(),shell=False)
         
-
 def main(dateStamp,ARG):
     if ARG == 'BATCH':
         batch = Batch(dateStamp)
+        print batch.DIR
         batch.analyse()
         batch.writeCSV()
+        batch.generateImages()
+
     if ARG == 'TIMETRACE':
         trace = TimeTrace(dateStamp)
         [dir] = trace.findFolders('TimeTraceFiles')
         trace.analyse(dir)           
         trace.writeCSV()
+        trace.generateImages()
+    if ARG == 'TRACE':
+        pbleach = Trace(dateStamp)
+        pbleach.getTrace()
+        pbleach.writeCSV()
     if ARG == 'IMAGES':
         image = Image(dateStamp)
-        image.convertPNG()
+    if ARG == 'CHANNELS':
+        ch = Channels(dateStamp)
+        ch.getCounts()
+        #for expt in ['BATCH','TIMETRACE']: image.convertPNG('expt'=expt)
 
-
-def invalidArg():
-    raise SystemExit("Incorrect Argument : python analyseCSV.py [dateStamp in format yyyy-mm-dd] [BATCH,TIMETRACE,IMAGES or TEST]")
-
-    
-if __name__ == '__main__': 
-    #ARG = 'BATCH'
-    #ARG = 'TIMETRACE'
-    #ARG = 'TEST'
+def getArguments(argv):
+    def invalidArg(): raise SystemExit("Incorrect Argument : python analyseCSV.py [dateStamp in format yyyy-mm-dd] [BATCH,TIMETRACE,IMAGES or TEST]")
     try: 
         [dateStamp,ARG] = sys.argv[1:]
-    except ValueError:
+        assert re.match(r"\d{4}-\d{2}-\d{2}$",dateStamp) and ARG in ['BATCH','TIMETRACE','IMAGES','TEST','CHANNELS','TRACE'] 
+        return (dateStamp,ARG)
+    except (ValueError,NameError, AssertionError): 
         print invalidArg()
-    try: 
-        assert re.match(r"\d{4}-\d{2}-\d{2}$",dateStamp) and ARG in ['BATCH','TIMETRACE','IMAGES','TEST']
-    except NameError or AssertionError: 
-        print invalidArg()
-
+    else:
+        raise
+    
+if __name__ == '__main__': 
+    dateStamp,ARG = getArguments(sys.argv[1:])
+    #option = False
+    option = True
+    
     t0 = time.clock()
     main(dateStamp,ARG)
     t1 = time.clock()
