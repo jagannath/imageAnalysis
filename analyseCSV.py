@@ -40,7 +40,7 @@ class Date(object):
         self.year = self.dateStamp[0:4]
         if default: 
             self.DIR = "/project2/marcotte/boulgakov/microscope/"+self.year+"-"+self.month+"/"+self.dateStamp
-            self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/"+self.year+"-"+self.month+"/"+self.dateStamp
+            self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/microscope1/"+self.year+"-"+self.month+"/"+self.dateStamp
         else:
             self.DIR = "/project2/marcotte/boulgakov/microscope/PACJ_walker/2013-"+self.month+"/"+self.dateStamp
             self.analyseDIR = "/project2/marcotte/jaggu/dataAnalysis/PACJ_walker/2013-"+self.month+"/"+self.dateStamp
