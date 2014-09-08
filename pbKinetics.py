@@ -61,8 +61,6 @@ class StarterFrame(object):
         pickle.dump(allPeakCoords,ofile)
         ofile.close()
         return ofname
-
-
   
 class TiffStack(object):
     """
@@ -218,12 +216,14 @@ def findInitialPeaks(dateStamp):
         pklFname = frame.picklePeakCoords(allPeakCoords)
         return allPeakCoords, pklFname
 
-    sourceDir = '/project2/marcotte/boulgakov/microscope/2014-July'
     pathDir = os.path.join(sourceDir,dateStamp)
     allStarterTiffs = locate('*01.tif',pathDir)
     firstFrameImages = [f for f in allStarterTiffs if re.search(r't[0]*01.tif',f)] #all time traces have a t###01.tif
     for fname in firstFrameImages:
         print "Processing Trace File : %s ...."%(fname)
+        touchFile = os.path.join(os.path.split(fname)[0],'NOAUTO.txt')
+        cmd = "touch " + touchFile
+        call(cmd.split(),shell=False)
         allPeakCoords,pklFname = _getPeakCoords(fname)
 
 def runThroughFrames(fname):
@@ -243,7 +243,6 @@ def makeBashScript(dateStamp):
     def _chuck(lst,n):
         return [lst[i::n] for i in xrange(n)]
     pattern = "*.tif.pkl"
-    sourceDir = '/project2/marcotte/boulgakov/microscope/2014-July'
     pathDir = os.path.join(sourceDir,dateStamp)
     allPklFiles = locate(pattern,pathDir)
     bashDir = os.path.join(pathDir,'bashDir')
@@ -262,11 +261,10 @@ def makeBashScript(dateStamp):
             ofile.write(cmd)   
 
 
-
-
 if __name__ == '__main__':
     [ARG, FILE] = sys.argv[1:]
     t0 = time.clock()
+    sourceDir = '/project2/marcotte/boulgakov/microscope/2014-Aug'
     if ARG == 'STARTER':
         dateStamp = FILE 
         findInitialPeaks(dateStamp)
@@ -283,7 +281,6 @@ if __name__ == '__main__':
     t1 = time.clock()
     print ("Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0, time.strftime("%d %b %Y %H:%M:%S",time.localtime()))
           )
-
 
 """
 ##############################################
