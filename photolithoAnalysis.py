@@ -146,19 +146,22 @@ class ProcessedImages(object):
         for csv in csvFiles:
             (mean,stdev) = self.calcIntensity(csv)
             (bgMean,areaBG) = self.calcBGIntensity(csv)
-            csvName = csv.split('/')[-1][:-12] 
+            csvName = csv.split('/')[-1][:-12]
+            print csvName, mean,bgMean
+
             ofile.write("\t".join([csv, csvName, str(mean),str(stdev),str(bgMean), str(areaBG),"\n"]))
             print mean, stdev, csvName
             
 
-dateStamp = "2014-09-03"
-#sourceDir ="/project2/marcotte/boulgakov/microscope2/jagannath/rawFiles/2014-Sept/" +dateStamp 
-sourceDir ="/project2/marcotte/boulgakov/microscope2/jagannath/rawFiles/2014-Sept/" +dateStamp + "/export" 
+dateStamp = "2014-09-05"
+sourceDir ="/project2/marcotte/boulgakov/microscope2/jagannath/rawFiles/2014-Sept/" +dateStamp 
+#sourceDir ="/project2/marcotte/boulgakov/microscope2/jagannath/rawFiles/2014-Sept/" +dateStamp + "/export" 
 
 destDir = "/project2/marcotte/jaggu/dataAnalysis/microscope2/2014-Sept/" + dateStamp
 if not os.path.exists(destDir): os.makedirs(destDir)
 resultCSV = os.path.join(destDir,dateStamp + "_SUMMARY_RESULT.csv")
 ofile = open(resultCSV,'w')
+print resultCSV
 ofile.write("\t".join(["CSV FILE", "NAME", "MEAN OF MEAN INTENSITY/PIXEL","STDEV OF MEAN INTENSITY/PIXEL","INTENSITY DENSITY OF BACKGROUND","AREA OF BACKGROUND","\n"]))
 
 
