@@ -205,6 +205,17 @@ def locate(pattern, root=os.curdir):
             allFiles.append(os.path.join(path,filename))
     return allFiles
 
+def test_findLastPeaks(dateStamp):
+    """ FINDING LAST PEAKS ON THE FRAME """
+    pathDir = os.path.join(sourceDir,dateStamp)
+    allFinalTiffs = locate('*599.tif',pathDir)
+    print allFinalTiffs
+
+
+
+
+
+
 def findInitialPeaks(dateStamp):
     """ FINDING INITIAL PEAKS FUNCTION """
 
@@ -272,6 +283,11 @@ if __name__ == '__main__':
         fname = FILE
         print "In Analyse: PKL file"
         runThroughFrames(fname)
+    elif ARG == 'TEST':
+        print "Test"
+        dateStamp = FILE
+        test_findLastPeaks(dateStamp)
+        print FILE
     elif ARG == 'GENERATE':
         dateStamp = FILE
         print "Generating a bash script to Analyse the pkl files"

@@ -69,35 +69,43 @@ class BeadStacks(object):
 
     def applyHoughCircles(self,fname):
         def _saveMaskImages():
-            circMaskImgName = os.path.join(self.pathSubDir,self.subDir+'_CircularMask.png')
-            ringMaskImgName = os.path.join(self.pathSubDir,self.subDir+'_RingMask.png')
+            circMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_CircularMask_edge3.png')
+            ringMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_RingMask_edge3.png')
             self._saveImage(circMaskImgName,circMask)
             self._saveImage(ringMaskImgName,cimg)
             return None
         
+        def _createBlur(orig):
+            blur = cv2.medianBlur(orig,5)
+            #blur = cv2.bilateralFilter(orig,10,20,20)
+            return blur 
+
         print fname
         orig = cv2.imread(fname,0)
-        img = cv2.medianBlur(orig,5)
+        blur = _createBlur(orig)
         circMask = np.zeros(orig.shape,dtype=np.uint16)
         ringMask = np.zeros(orig.shape,dtype=np.uint16)
         cimg = cv2.cvtColor(orig,cv2.COLOR_GRAY2BGR)
+
         # These are the parameters that appear to work. So edit with caution.
         #circles = cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,dp=1,
         #                       minDist=30,param1=90,param2=60,minRadius=30,maxRadius=150)
         
-
         circles = (
-        cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,dp=1,minDist=30,param1=90,param2=60,minRadius=20,maxRadius=75)
+        cv2.HoughCircles(blur,cv2.cv.CV_HOUGH_GRADIENT,dp=1,minDist=30,param1=90,param2=60,minRadius=25,maxRadius=75)
         )
-
+        
         if circles is not None:
             print "Number of Circle found : %d ..."%len(circles[0])
             #if len(circles[0])>20: return circMask, ringMask #Something is really wrong if there are more than 20 circles detected
             for c in circles[0][0:20]:
             # c[0],c[1] = (x,y) center; c[1] = r (radius)
-                cv2.circle(circMask,(c[0],c[1]),c[2],1,-1)
-                cv2.circle(ringMask,(c[0],c[1]),c[2],1, 3)
-                cv2.circle(cimg,(c[0],c[1]),c[2],( 71,144,48),3)
+                rad = int(c[2]-3)
+                circMaskRad = int( 0.75*c[2])
+                thickness = 6 
+                cv2.circle(circMask,(c[0],c[1]),circMaskRad,1,-1)
+                cv2.circle(ringMask,(c[0],c[1]),rad,1, thickness)
+                cv2.circle(cimg,(c[0],c[1]),rad,( 71,144,48),thickness)
             _saveMaskImages()
         return circMask, ringMask
             
@@ -142,6 +150,8 @@ class BeadExpt(object):
     def makeOutFiles(self):
         outFull = os.path.join(self.destDir,self.dateStamp+"_FULLSUMMARY.csv")
         outShort = os.path.join(self.destDir,self.dateStamp+"_SHORTSUMMARY.csv")
+        self.headerLabel = "\t".join(
+            ["PATH","FNAME","DIC","DAPI","FITC","TRITC","CY5","STD-DIC","STD-DAPI","STD-FITC","STD-TRITC","STD-CY5","\n"])    
         return open(outFull,'w'),open(outShort,'w')
 
     def getData(self,fname):
@@ -152,22 +162,37 @@ class BeadExpt(object):
         return circData,ringData
 
     def writeFullSummary(self):
-        
-        headerLabel = "\t".join(["PATH","FNAME","DIC","DAPI","FITC","TRITC","CY5","\n"])    
-        self.outFullFile.write(headerLabel)
-
-        def _writeList(lines):
+        def _writeFullList(lines):
             for l in lines: 
                 self.outFullFile.write("\t".join(l)+"\n")
             self.outFullFile.write("\n")
-            
-        #ofile.write("\t".join(["PATH","FNAME","DIC","DAPI","FITC","TRITC","CY5","\n"]))
-        self.outFullFile.write("CIRCULAR MASK MEAN INTENSITY \n")       
-        for k, v in sorted(self.nameCircInt_dict.items()):  _writeList(v)
-        self.outFullFile.write("\n RING MASK MEAN INTENSITY \n")
-        for k, v in sorted(self.nameRingInt_dict.items()): _writeList(v)
 
-    def fullSummary(self):
+        #ofile.write("\t".join(["PATH","FNAME","DIC","DAPI","FITC","TRITC","CY5","\n"]))
+        self.outFullFile.write(self.headerLabel)
+        self.outFullFile.write("CIRCULAR MASK MEAN INTENSITY \n")       
+        for k, v in sorted(self.nameCircInt_dict.items()):  _writeFullList(v)
+        self.outFullFile.write("\n RING MASK MEAN INTENSITY \n")
+        for k, v in sorted(self.nameRingInt_dict.items()): _writeFullList(v)
+
+    def writeShortSummary(self):
+        meanDIC = list()
+        def _writeShortList(name,lines):
+            intList = lambda x: [float(l[x]) for l in lines if float(l[x])>0]
+            intLDIC,intLDAPI,intLFITC,intLTRITC,intLCY5 = map(intList,[2,3,4,5,6])
+            meanDIC,meanDAPI, meanFITC,meanTRITC,meanCY5 = map(np.mean,
+                                                               [intLDIC,intLDAPI,intLFITC,intLTRITC,intLCY5])
+            stdevDIC,stdevDAPI,stdevFITC,stdevTRITC,stdevCY5 = map(np.std,
+                                                                   [intLDIC,intLDAPI,intLFITC,intLTRITC,intLCY5])
+            self.outShortFile.write("\t".join(map(str,
+                                                  [pathDir,name,meanDIC,meanDAPI,meanFITC,meanTRITC,meanCY5,stdevDIC,stdevDAPI,stdevFITC,stdevTRITC,stdevCY5,"\n"])))
+        
+        self.outShortFile.write(self.headerLabel)
+        self.outShortFile.write("CIRCULAR MASK MEAN INTENSITY CALCULATED FOR EXPERIMENT \n")
+        for k,v in sorted(self.nameCircInt_dict.items()): _writeShortList(k,v)
+        self.outShortFile.write("\n RING MASK MEAN INTENSITY CALCULATED FOR EXPERIMENT \n")
+        for k,v in sorted(self.nameRingInt_dict.items()): _writeShortList(k,v)
+    
+    def summarize(self):
         for csv in self.allcsv:
             fpath = csv
             fullname = "_".join(fpath.split('_')[:-3])
@@ -176,21 +201,61 @@ class BeadExpt(object):
             self.nameCircInt_dict[name].append(circData)
             self.nameRingInt_dict[name].append(ringData)
         self.writeFullSummary()
+        self.writeShortSummary()
+        self.outShortFile.close()
+        self.outFullFile.close()
 
+########### END OF CLASS ###############################
 
-def test_summary(exptDir):
-    test = BeadExpt(exptDir)
-    print test.destDir
-    f = test.allcsv[0]
-    test.fullSummary()
-    test.outFullFile.close()
-    test.outShortFile.close()
+def testingMask(subDir):
+    def _blur(orig):
+        #blur = cv2.medianBlur(orig,5)
+        blur = cv2.bilateralFilter(orig,6,50,50)
+        return blur 
+    def _sharpen(img):
+        sharpened = cv2.Laplacian(img,cv2.CV_8U)
+        return sharpened
 
-def test_case(subDir):
-    test = BeadStacks(subDir)
-    print "Processing %s ..."%(subDir)
-    print test.pathSubDir
-    test.computeBeadIntensity()
+    def _edge(img):
+        edged = cv2.Canny(img,30,500)
+        return edged
+
+    def _show(img):
+        plt.imshow(img,cmap='gray')
+        plt.show()
+
+    def _houghCircles(img):
+        cimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)     
+        circles = (
+        cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,dp=1,minDist=30,param1=90,param2=60,minRadius=25,maxRadius=75)
+        )
+        
+        if circles is not None:
+            print "Number of Circle found : %d ..."%len(circles[0])
+            #if len(circles[0])>20: return circMask, ringMask #Something is really wrong if there are more than 20 circles detected
+            for c in circles[0][0:20]:
+            # c[0],c[1] = (x,y) center; c[1] = r (radius)
+                rad = int(c[2])
+                thickness = 1 
+                print rad, c[2]
+                cv2.circle(cimg,(c[0],c[1]),rad,1, thickness)
+        return cimg
+    
+    name = subDir + 'c' + str(1) + '.tif'
+    fname = os.path.join(pathDir,subDir,name)
+    orig = cv2.imread(fname)
+    print fname
+    blur = _blur(orig)
+    _show(blur)
+    edged = _edge(blur)
+    _show(edged)
+
+    sharpened = _sharpen(blur)
+    _show(sharpened)
+    blended = cv2.addWeighted(orig,0.3,sharpened,0.9,0)
+    _show(blended)
+    cimg = _houghCircles(blended)
+    _show(cimg)
 
 
 def generateMask(pathDir):
@@ -200,9 +265,26 @@ def generateMask(pathDir):
         print "Processing %s ..."%(subDir)
         image.computeBeadIntensity()
 
+def summarizeResults(exptDir):
+    expt = BeadExpt(exptDir)
+    print "Processing csv files in folder %s ..."%(exptDir)
+    expt.summarize()
+
+def test_case(subDir):
+#    testingMask(subDir)
+    test = BeadStacks(subDir)
+    print "Processing %s ..."%(subDir)
+    print test.pathSubDir
+    test.computeBeadIntensity()
+
+
+
+
+
+
 
 if __name__ == '__main__':
-    monthIs = {'05':'May','06':'Jun','07':'July','08':'Aug','09':'Sept'}
+    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept'}
 
     #sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-July"
     #dateStamp = "2014-07-31b"
@@ -222,12 +304,12 @@ if __name__ == '__main__':
         generateMask(pathDir)
     elif ARG == 'ANALYSE':
         print "Analysing"
-        test_summary(exptDir)
+        summarizeResults(exptDir)
     elif ARG == 'TEST':
         print "Testing"
         month = monthIs[dateStamp.split('-')[1]] 
         pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
-        subDir = "TentagelNH2_BODIPYFLMal_10ms_Before_flds002"
+        subDir = "TentagelNH2_JSPR003A_Mock1_5s_flds018"
         test_case(subDir)
     else:
         raise SystemExit("Incorrect argument")
@@ -245,11 +327,20 @@ if __name__ == '__main__':
 
 
 
+"""
+#### Test functions
+def test_summary(exptDir):
+    test = BeadExpt(exptDir)
+    print test.destDir
+    f = test.allcsv[0]
+    test.summarize()
+    test.outFullFile.close()
+    test.outShortFile.close()
 
+def test_case(subDir):
+    test = BeadStacks(subDir)
+    print "Processing %s ..."%(subDir)
+    print test.pathSubDir
+    test.computeBeadIntensity()
 
-
-
-
-
-#test_mask(fname)
-
+"""
