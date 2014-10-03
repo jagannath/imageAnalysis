@@ -174,9 +174,13 @@ def plot_RadialIntensity(circInfo,imageDir,subDir):
                 minMaxNormInt = [((val-minInt)/(maxInt-minInt)) for val in intList]
                 plotIntensityList(circles,ax,rrange,minMaxNormInt,nbr, typeIntensity)           
             else:
+                print rrange
+                print intList
+                sys.exit(1)
                 plotIntensityList(circles,ax,rrange,intList,nbr,typeIntensity)
-        name = os.path.join(imageDir,subDir+'_'+typeIntensity+'.png')
-        circles._saveFig(name)
+        name = os.path.join(imageDir,subDir+'_bin_0.001_'+typeIntensity+'.png')
+        #circles._saveFig(name)
+        circles._showFig()
 
 
 def get_intensity(subDir):
@@ -186,24 +190,28 @@ def get_intensity(subDir):
     orig,cimg = expt._openImages(dicImage)
     circles = expt.findHoughCircles(orig)
     circInfo = collections.defaultdict(list)
-    if len(circles)>1: 
+    binSize = 0.1
+    if len(circles)>0: 
         expt._saveHoughCircles(circles,cimg,putNbr=True)
         dyeImage = expt._getImageName(4)
         dyeImg,cDyeImg = expt._openImages(dyeImage,flag=-1)#Dont use cDyeImg now
         expt._saveHoughCircles(circles,dyeImg,idx=4,putNbr=True)
         for i,c in enumerate(circles[0]):
             x,y,rad = map(int,c)
-            thickness = int( 0.1*rad)
+            thickness = int(np.ceil( binSize*rad))
+            print "Binning with thickness : %d"%(thickness)
             #print "Circle # %d : %d,%d,%d"%(i,x,y,rad)
-            for r in np.arange( 0.1,1.2,0.1):
+            for r in np.arange( 0.1,1.5,binSize):
                 newrad = int(r*rad)
                 ringMask = expt.drawRingMask(orig,x,y,newrad,thickness)
                 intensity,area,meanIntensity = expt.applyMask(ringMask,dyeImg)
+                expt._show(ringMask)
+                print "Intensity of mask of radius %d is %f and area is %d "%(newrad,meanIntensity,area)
                 circInfo[i].append([i, r, intensity,area,meanIntensity])
-    return (circInfo,imageDir)
-
-
-
+            sys.exit(1)
+        return (circInfo,imageDir)
+    else:
+        return 0, imageDir
 
 
 #sourceDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-Aug"
@@ -240,7 +248,7 @@ if __name__ == '__main__':
         print "Testing"
         month = monthIs[dateStamp.split('-')[1]] 
         pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
-        subDir = "TentagelNH2_CR1NHS_200uM_Before_1s_flds005"
+        subDir = "TentagelNH2_JSPR003C_Before_5s_flds008"
         test_case(subDir)
     else:
         raise SystemExit("Incorrect argument")
