@@ -1,6 +1,7 @@
 #! /home/boulgakov/localpython2/bin/python
 #!/home/boulgakov/localpython/bin/python
 #!/home/boulgakov/anaconda/bin/python
+#! /home/jaggu/anaconda/bin/python2.7
 
 """
 Jag and Alex's automated pipeline. Thank you Zack for help!
@@ -37,7 +38,7 @@ import subprocess
 def fit_peaks(images, image_tuples=None, correlation_matrix=None,
               median_diameter=5, r_2_threshold=0.5, c_std=4,
               consolidation_radius_sq=4**2, child_number=0,
-              child_priority_increment=0, silent=True):
+              child_priority_increment=0, silent=False):
     """
     The core function of the algorithm. In each image, finds all peaks and
     evaluates their resemblance to a Gaussian PSF model.
@@ -84,10 +85,10 @@ def fit_peaks(images, image_tuples=None, correlation_matrix=None,
                                                        mode='same'),
                                 np.zeros_like(image)).astype(np.int64)
                      for image in images]
-        if not silent:
-            logging.info("pflib.fit_peaks child number " + str(child_number) +
-                         ": applied correlation filter")
-            sys.stdout.flush()
+        #if not silent:
+           # logging.info("pflib.fit_peaks child number " + str(child_number) +
+            #             ": applied correlation filter")
+            #sys.stdout.flush()
     consolidated_peak_stack = [[] for image in images]
     for i, image in enumerate(images_s3):
         start_time = time.clock()

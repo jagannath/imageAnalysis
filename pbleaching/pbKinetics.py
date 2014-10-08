@@ -1,4 +1,7 @@
+#!/home/boulgakov/localpython2/bin/python
 #! /home/jaggu/anaconda/bin/python2.7
+#!/home/boulgakov/localpython2/bin/python
+
 
 """
 This programme does the image analysis of time trace files only. First it uses
@@ -47,9 +50,8 @@ class StarterFrame(object):
     def find_starterPeaks(self):
         self.outputPNG = self.convertPNG()
         img = scipy.misc.imread(self.outputPNG)
-        print img, self.correlation_matrix
+        print "Processing STARTER"
         results = pflibMP.fit_peaks([img],correlation_matrix=self.correlation_matrix)
-        print results
         self.allPeakResults = results[0][1]
         return self.allPeakResults
 

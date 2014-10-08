@@ -18,6 +18,7 @@ import os
 import sys
 from subprocess import call
 import cv2
+sys.path.append('/project/marcotte/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
 from commonFunctions import locate
 import re
 import cPickle as pickle
@@ -80,7 +81,6 @@ class BeadStacks(object):
             #blur = cv2.bilateralFilter(orig,10,20,20)
             return blur 
 
-        print fname
         orig = cv2.imread(fname,0)
         blur = _createBlur(orig)
         circMask = np.zeros(orig.shape,dtype=np.uint16)
@@ -155,6 +155,8 @@ class BeadExpt(object):
         return open(outFull,'w'),open(outShort,'w')
 
     def getData(self,fname):
+        circData = ''
+        ringData = ''
         with open(fname) as f:
             lines = f.readlines()
         circData = lines[2].split('\t')[:-1]
@@ -177,7 +179,7 @@ class BeadExpt(object):
     def writeShortSummary(self):
         meanDIC = list()
         def _writeShortList(name,lines):
-            intList = lambda x: [float(l[x]) for l in lines if float(l[x])>0]
+            intList = lambda x: [float(l[x]) for l in lines ]
             intLDIC,intLDAPI,intLFITC,intLTRITC,intLCY5 = map(intList,[2,3,4,5,6])
             meanDIC,meanDAPI, meanFITC,meanTRITC,meanCY5 = map(np.mean,
                                                                [intLDIC,intLDAPI,intLFITC,intLTRITC,intLCY5])
@@ -282,9 +284,8 @@ def test_case(subDir):
 
 
 
-
 if __name__ == '__main__':
-    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept'}
+    monthIs =  {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct'}
 
     #sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-July"
     #dateStamp = "2014-07-31b"
