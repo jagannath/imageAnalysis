@@ -70,8 +70,8 @@ class BeadStacks(object):
 
     def applyHoughCircles(self,fname):
         def _saveMaskImages():
-            circMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_CircularMask_edge3.png')
-            ringMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_RingMask_edge3.png')
+            circMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_CircularMask.png')
+            ringMaskImgName =  os.path.join(self.pathSubDir,self.subDir+'_RingMask.png')
             self._saveImage(circMaskImgName,circMask)
             self._saveImage(ringMaskImgName,cimg)
             return None
@@ -100,10 +100,9 @@ class BeadStacks(object):
             #if len(circles[0])>20: return circMask, ringMask #Something is really wrong if there are more than 20 circles detected
             for c in circles[0][0:20]:
             # c[0],c[1] = (x,y) center; c[1] = r (radius)
-                rad = int(c[2]-3)
-                circMaskRad = int( 0.75*c[2])
-                thickness = 6 
-                cv2.circle(circMask,(c[0],c[1]),circMaskRad,1,-1)
+                rad = int( c[2])
+                thickness = 3 
+                cv2.circle(circMask,(c[0],c[1]),rad,1,-1)
                 cv2.circle(ringMask,(c[0],c[1]),rad,1, thickness)
                 cv2.circle(cimg,(c[0],c[1]),rad,( 71,144,48),thickness)
             _saveMaskImages()
@@ -259,13 +258,18 @@ def testingMask(subDir):
     cimg = _houghCircles(blended)
     _show(cimg)
 
+def skip(subDir):
+    skipList = ['zStep','Zstep']
+    for s in skipList: 
+        if s in subDir: return True
 
 def generateMask(pathDir):
     print "Generating Masks for folders in %s ..."%(pathDir)
     for subDir in next(os.walk(pathDir))[1]:
-        image = BeadStacks(subDir)
-        print "Processing %s ..."%(subDir)
-        image.computeBeadIntensity()
+        if not skip(subDir):
+            image = BeadStacks(subDir)
+            print "Processing %s ..."%(subDir)
+            image.computeBeadIntensity()
 
 def summarizeResults(exptDir):
     expt = BeadExpt(exptDir)

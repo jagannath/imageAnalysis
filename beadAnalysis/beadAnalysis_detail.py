@@ -26,54 +26,6 @@ import shelve
 import time
 from beadExperiment import BeadExpt
 
-class PlotRadial(object):
-    """
-    This gathers the information about mean intensity,area under different ring
-    masks for each circle as a dictionary. The idea is to be able to plot it to
-    see how to make sense of the different graphs.
-    """
-    def __init__(self,circInfo,imageDir,subDir):
-        #plt.close() #Ensuring it is clean
-        self.circInfo = circInfo
-        self.imageDir = imageDir
-        self.subDir = subDir
-        #self.fig = plt.Figure(figsize=( 30,30),dpi=100,tight_layout=True)
-        self.fig, self.axTupTup = plt.subplots(nrows=2,ncols=2)
-        self.axTup = [ax for tup in self.axTupTup for ax in tup]
-        font = {'size':6}
-        matplotlib.rc('font',**font)
-    
-    def _plotRadial(self,ax,x,y):
-        ax.plot(x,y)
-        return ax
-    
-    def _plotLabels(self,ax,title,xlabel,ylabel):
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.text( 0.5,0.7,title,
-                horizontalalignment='center',
-                transform = ax.transAxes)
-        return ax
-    
-    def _settickintervals(self,ax,x,y,xstep,ystep):
-        ax.xaxis.set_ticks(np.arange(0,np.max(x),xstep))
-        ax.yaxis.set_ticks(np.arange(0,np.amax(y),ystep))
-        return ax
-
-    def _setLimits(self,ax,xmax,ymax):
-        ax.set_xlim([0,xmax])
-        ax.set_ylim([0,ymax])
-        return ax
-
-    def _showFig(self):
-        plt.tight_layout(pad=0.8,w_pad=0.8,h_pad=1.2)
-        plt.show()
-
-    def _saveFig(self,fname):
-        plt.tight_layout(pad=0.8,w_pad=0.8,h_pad=2.0)
-        plt.savefig(fname)
-        plt.close(self.fig)
-
 
 class PlotLineProfile(object):
     """
@@ -132,11 +84,11 @@ class PlotLineProfile(object):
         plt.savefig(fname)
         plt.close(self.fig)
 
-    def getIntensityList(self,img,orientation,(x0,y0,r)):
+    def getIntensityList(self,img,orientation,(x0,y0,r),theta=(np.pi/4)):
         extfactor = 1.2
         extRad = r*extfactor
         def __checkEdges(x):
-            if x > 512: x = 512
+            if x > 511: x = 511
             elif x < 0: x = 0
             else: x
             return x
@@ -158,16 +110,19 @@ class PlotLineProfile(object):
             start = (int(x0),int(y1))
             end = (int(x0),int(y2))
         elif orientation is 'Slant':
-            x1 = x0 - extRad*np.sin(np.pi/4)
-            y1 = y0 - extRad*np.sin(np.pi/4)
-            x2 = x0 + extRad*np.sin(np.pi/4)
-            y2 = y0 + extRad*np.sin(np.pi/4)
-            xN = [__checkEdges(x) for x in np.arange(x1,x2)]
-            yN = [__checkEdges(y) for y in np.arange(y1,y2)]
+            x1 = int(x0 - extRad*np.sin(theta))
+            y1 = int(y0 - extRad*np.cos(theta))
+            x2 = int(x0 + extRad*np.sin(theta))
+            y2 = int(y0 + extRad*np.cos(theta))
+            xList = np.arange(x1,x2,1)
+            yList = np.arange(y1,y2,1)
+            xN = [__checkEdges(x) for x in xList]
+            yN = [__checkEdges(y) for y in yList]
             yx = zip(yN,xN)
             start = (int(x1),int(y1))
             end = (int(x2),int(y2))
             xaxis = [item[1] for item in yx]
+
         intList = [img[i] for i in yx]
         
         return (xaxis,intList,yx,start,end)
@@ -197,13 +152,16 @@ class PlotLineProfile(object):
 
 
 ########### COMMON FUNCTIONS #################
-def getCircles(subDir):
+def getCircles(subDir,maskSource='DIC'):
     expt = BeadExpt(subDir,pathDir)
     imageDir = expt.imageDir
-    dyeImage = expt._getImageName(4)
+    if maskSource is 'DIC':
+        dyeImage = expt._getImageName(1)
+    else:
+        dyeImage = expt._getImageName(4)
     orig,cimg = expt._openImages(dyeImage)
     circles = expt.findHoughCircles(orig)
-    orig = cv2.imread(dyeImage,-1)
+    orig,cimg = expt._openImages(expt._getImageName(4),-1)
     return circles,orig,cimg
 
 ######### LINE PLOTTING FUNCTION ######################
@@ -218,7 +176,7 @@ def sumProfiles(allXYDict,method='mean'):
     return (x,y)
 
 
-def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis'):
+def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis',maskSource='DIC'):
     # Note = For accesing the images, the coordinates are read as (y,x) [rows
     # and cols]
 
@@ -226,9 +184,8 @@ def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis'):
     colGreen = [( 153,153,51),'#999933']
     colRed = [( 136,34,85),'#882255']
     colors = [colBlue,colGreen,colRed]
-#    orientationList = ['Slant','Xaxis','Yaxis']
+    orientationList = ['Slant','Xaxis','Yaxis']
     allXYDict = collections.defaultdict(list)
-    method = 'mean'
     
     nbrCircles = len(circles[0])
     line = PlotLineProfile(imageDir,subDir,circles[0])
@@ -237,26 +194,28 @@ def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis'):
     for i,cCoords in enumerate(circles[0]):
         x0,y0,r =  cCoords
         print "Circle #%d at (%f,%f); radius = %f"%(i,x0,y0,r)
-        xVal,yVal,xyCoords,start,end =  line.getIntensityList(orig,orientation,(x0,y0,r))
-        cimg = line._overLayLine(cimg,start,end)
+        xValList = list()
+        yValList = list()
+        for orientation in orientationList: 
+            xVal,yVal,xyCoords,start,end =  line.getIntensityList(orig,orientation,(x0,y0,r))
+            xVal,yVal = line.normalizeXY(xVal,yVal)
+            for j,key in enumerate(xVal):allXYDict[key].append(yVal[j])       
+            cimg = line._overLayLine(cimg,start,end)
+
         cv2.putText(cimg,str(i),(cCoords[0],int(cCoords[1]-10)),cv2.FONT_HERSHEY_SIMPLEX,1,color=colRed[0][0])
-        xVal,yVal = line.normalizeXY(xVal,yVal)
-        for j,key in enumerate(xVal):allXYDict[key].append(yVal[j])
         
         ax= axTup[i]
         ax = line._plotLine(ax,xVal,yVal,colBlue[1])
         ax = line._plotLabels(ax,'Circle #'+str(i),'Range (pixels)','')
 
         xstep,ystep = 0.25,50
-        #ax.xaxis.set_ticks(np.arange(int(min(xVal)),int(max(xVal)),xstep))
-        ax.xaxis.set_ticks(np.arange(np.amin(xVal),np.max(xVal),xstep))
+        ax.xaxis.set_ticks(np.arange(np.amin(xVal),np.amax(xVal),xstep))
         ax.yaxis.set_ticks(np.arange(0,np.amax(yVal),ystep))    
-        
-    fname = os.path.join(imageDir,subDir+'_'+orientation+'_LINE_NORMALIZE.png')
-    print fname
+    
+    fname = os.path.join(imageDir,subDir+'_'+maskSource+'_'+orientation+'_ALL_LINE_NORM.png')
     line._saveFig(fname)
     plt.imshow(cimg,cmap='gray')
-    name = fname[:-4]+'_'+method+'_'+orientation+'.CIRCLES.png'
+    name = fname[:-4]+'_'+maskSource+'_'+method+'_'+orientation+'.CIRCLES.png'
     plt.savefig(name)
     plt.close()
     
@@ -267,35 +226,102 @@ def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis'):
     ax = line._plotLine(ax,x,y,colRed[1])
     ax = line._plotLabels(ax,'Mean of Profiles','Normalized Distance','Normalized Median Intensity')
     ax = ax.text( 0.8,0.9,'n='+str(nbrCircles),fontsize=12,transform=ax.transAxes)   
-    plt.savefig(fname[:-4]+'_Sum'+method+'_'+orientation+'.MeanOfProfiles.png')
+    plt.savefig(fname[:-4]+'_'+maskSource+'_'+method+'_'+orientation+'.All.MeanOfProfiles.png')
+    
     plt.close()
      
     return allXYDict
 
+def skip(name):
+    flag = False
+    skipList = ['zStep','Zstep']
+    for i in skipList:
+        if i in name:flag=True
+    return flag
+            
+
+def combineLinePlots(pathDir):
+    print "Making Line Plots for folders in %s ..."%(pathDir)
+    #fnameXYDict = collections.defaultdict(dict)
+    globalXYDict = collections.defaultdict(list)
+    orientation = 'Xaxis'
+    method = 'mean'
+    maskSource = 'DIC'
+    names = ["TentagelNH2_CR1IamTCEP_"+i for i in
+             ["Before","Zero"]]
+    circleCount = 0
+    for subDir in next(os.walk(pathDir))[1]:
+        name = names[0] 
+
+        if subDir.startswith(name):
+            if not skip(subDir):
+
+                print "Processing %s ..."%(subDir)
+                imageDir = os.path.join(pathDir,subDir,"LineProfiles")
+                if not os.path.exists(imageDir): os.makedirs(imageDir)
+                print "Image Dir : %s ...."%(imageDir)
+                circles,orig,cimg = getCircles(subDir,maskSource)
+
+                if len(circles)>0:
+                    circleCount+=len(circles[0])                           
+                    allXYDict = plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation=orientation,maskSource=maskSource)
+                    for k in allXYDict.keys():
+                        globalXYDict[k].extend(allXYDict[k])
+    
+    print "Number of Circles Counted : %d"%(circleCount)
+    plt.close()
+    fig,ax = plt.subplots(figsize=( 5,5),dpi=300)
+    x,y = sumProfiles(globalXYDict,method='mean')
+    ax.plot(x,y,linewidth=3.0,color='#582A72')
+    ax.set_xlabel('Normalized distance')
+    ax.set_ylabel('Normalized Median Intensity')
+    ax = ax.text( 0.6,0.9,'# Circles ='+str(circleCount),fontsize=12,transform=ax.transAxes)   
+    fname = os.path.join(sourceImageDir,name+'_'+maskSource+'_'+method+'_all.LineProfile.png')
+    print "File Summed : %s "%(fname)
+    plt.savefig(fname)
+
+
+
+def test_case(subDir):
+    print "Testing %s"%(os.path.join(pathDir,subDir))
+    allXYDict = collections.defaultdict(list)
+    #(circles,circInfo,imageDir) = get_intensity(subDir)
+    #if circInfo>0: plot_RadialIntensity(circles,circInfo,imageDir,subDir)
+    circles,orig,cimg = getCircles(subDir)
+    if len(circles)>0: plot_LineIntensity(circles,orig,cimg,imageDir,subDir)
+
+if __name__ == '__main__':
+    monthIs =     {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct'}
+
+    [ARG,dateStamp] = sys.argv[1:]
+    epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
+    rawDataDir = os.path.join(epiDir,"rawFiles")
+    sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
+    month = monthIs[dateStamp.split('-')[1]]
+    exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
+    pathDir = os.path.join(exptDir,"rawImages")
+
+
+    t0 = time.clock()
+    if ARG == 'LINEPLOTS':
+        sourceImageDir = os.path.join(exptDir,"LinePlotsAll")
+        if not os.path.exists(sourceImageDir): os.makedirs(sourceImageDir)
+        combineLinePlots(pathDir)
+    elif ARG == 'TEST':
+        print "Testing"
+        month = monthIs[dateStamp.split('-')[1]] 
+        pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
+        subDir = "TentagelNH2_JSPR003C_Before_5s_flds008"
+        imageDir = os.path.join(pathDir,subDir,"Graphs")
+        test_case(subDir)
+    else:
+        raise SystemExit("Incorrect argument")
+    t1 = time.clock()
+    print ("Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0, time.strftime("%d %b %Y %H:%M:%S",time.localtime()))
+          )
 
 
 """
-    def __plotCircle(cChoice,cCoords):
-        cCoords = circles[0][cChoice]
-        line = PlotLineProfile(imageDir,subDir,nbrCircles)
-        #axLeft,axRight = profile.axTup[cChoice],profile.axTup[cChoice+1]
-        x0,y0,r =  cCoords
-        print "Circle at (%f,%f); radius = %f"%(x0,y0,r)
-        
-        xVal,yVal,xyCoords,start,end =  line.getIntensityList(cimg,'Xaxis',(x0,y0,r))
-#        profile._overLayLine(cdyeImg,start,end,col=colors[0][0])        
-#        axLeft = axLeft.imshow(cdyeImg,cmap='gray')
-#        profile._plotLine(axRight,xVal,yVal,col=colors[0][1])
-
-        #for i,ax in enumerate(profile.axTup[:-1]):
-         #   xVal,yVal,xyCoords,start,end = profile.getIntensityList(dyeImg,orientation[i],(x0,y0,r))
-          #  profile._overLayLine(cdyeImg,start,end,col=colors[i][0])
-           # profile._plotLine(ax,xVal,yVal,col=colors[i][1])
-           # profile._plotLabels(ax,orientation[i] + ' Profile','Range (Pixels)', 'Raw Intensity')
-        return (start,end,(xVal,yVal))
-    # End of function
-"""
-
 ######## RADIAL PLOTTING FUNCTION ###################
 
 def plot_RadialIntensity(allCircles,circInfo,imageDir,subDir):
@@ -317,7 +343,6 @@ def plot_RadialIntensity(allCircles,circInfo,imageDir,subDir):
 
         circles._plotRadial(ax,rrange,intList)
         circles._setTickIntervals(ax,rrange,intList,xstep,ystep)
-#        circles._setLimits(ax,xmax,ymax)
         circles._plotLabels(ax,title,xlabel,ylabel)
 
 
@@ -390,11 +415,6 @@ def get_intensity(subDir):
 
 
 
-#sourceDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-Aug"
-#dateStamp = "2014-08-19"
-#pathDir = os.path.join(sourceDir,dateStamp,"rawImages")
-#subDir = "TentagelNH2_EDC_JSPR001_Before_1fps_flds014"
-
 def makeRadialPlot(pathDir):
     print "Generating Masks for folders in %s ..."%(pathDir)
     for subDir in next(os.walk(pathDir))[1]:
@@ -403,79 +423,33 @@ def makeRadialPlot(pathDir):
         plot_RadialIntensity(circInfo,imageDir,subDir)
 
 
-def combineLinePlots(pathDir):
-    print "Making Line Plots for folders in %s ..."%(pathDir)
-    #fnameXYDict = collections.defaultdict(dict)
-    globalXYDict = collections.defaultdict(list)
-    orientation = 'Xaxis'
-    method = 'mean'
-    names = ["TentagelNH2_JSPR003D_"+i for i in ["Before","Mock","Edman","4hTFA"]]
-    circleCount = 0
-    for subDir in next(os.walk(pathDir))[1]:
-        name = names[0] 
-        if subDir.startswith(name):
-            print "Processing %s ..."%(subDir)
-            imageDir = os.path.join(pathDir,subDir,"LineProfiles")
-            if not os.path.exists(imageDir): os.makedirs(imageDir)
-            print "Image Dir : %s ...."%(imageDir)
-            circles,orig,cimg = getCircles(subDir)
-
-            if len(circles)>0:
-                circleCount+=len(circles[0])                           
-                allXYDict = plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation=orientation)
-                for k in allXYDict.keys():
-                    globalXYDict[k].extend(allXYDict[k])
-    
-    print "Number of Circles Counted : %d"%(circleCount)
-    plt.close()
-    fig,ax = plt.subplots(figsize=( 5,5),dpi=300)
-    x,y = sumProfiles(globalXYDict,method='mean')
-    ax.plot(x,y,linewidth=3.0,color='#582A72')
-    ax.set_xlabel('Normalized distance')
-    ax.set_ylabel('Normalized Median Intensity')
-    ax = ax.text( 0.8,0.9,'n='+str(circleCount),fontsize=12,transform=ax.transAxes)   
-    fname = os.path.join(sourceImageDir,name+'_Sum_'+method+'_'+orientation+'.combinedNormalized.LineProfile.png')
-    plt.savefig(fname)
 
 
 
 
-def test_case(subDir):
-    print "Testing %s"%(os.path.join(pathDir,subDir))
-    allXYDict = collections.defaultdict(list)
-    #(circles,circInfo,imageDir) = get_intensity(subDir)
-    #if circInfo>0: plot_RadialIntensity(circles,circInfo,imageDir,subDir)
-    circles,orig,cimg = getCircles(subDir)
-    if len(circles)>0: plot_LineIntensity(circles,orig,cimg,imageDir,subDir)
-
-if __name__ == '__main__':
-    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept'}
-
-    [ARG,dateStamp] = sys.argv[1:]
-    epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
-    rawDataDir = os.path.join(epiDir,"rawFiles")
-    sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
-    month = monthIs[dateStamp.split('-')[1]]
-    exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
-    pathDir = os.path.join(exptDir,"rawImages")
 
 
-    t0 = time.clock()
-    if ARG == 'RADIALPLOT':
-        makeRadialPlot(pathDir)
-    elif ARG == 'LINEPLOTS':
-        sourceImageDir = os.path.join(exptDir,"LinePlotsAll")
-        if not os.path.exists(sourceImageDir): os.makedirs(sourceImageDir)
-        combineLinePlots(pathDir)
-    elif ARG == 'TEST':
-        print "Testing"
-        month = monthIs[dateStamp.split('-')[1]] 
-        pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
-        subDir = "TentagelNH2_JSPR003C_Before_5s_flds008"
-        imageDir = os.path.join(pathDir,subDir,"Graphs")
-        test_case(subDir)
-    else:
-        raise SystemExit("Incorrect argument")
-    t1 = time.clock()
-    print ("Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0, time.strftime("%d %b %Y %H:%M:%S",time.localtime()))
-          )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+
