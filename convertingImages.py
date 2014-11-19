@@ -46,13 +46,14 @@ def convertBatchImages(dateStamp):
     for inputTif in allTiffs:
         outputTif1 = inputTif + '%d_scaled.png'
         outputTif2 = inputTif + '%d_noScale.png'
-        cmd1 = "convert -contrast-stretch 0.015x0.05% " + inputTif + " " + outputTif1
+        cmd1 = "convert -contrast-stretch 0.15x0.05% " + inputTif + " " + outputTif1
         cmd2 = "convert " + inputTif + " " + outputTif2
         call(cmd1.split(),shell=False)
         call(cmd2.split(),shell=False)
 
 def convertOneRandomImage(imgDir,destDir):
     randomFile = choice(os.listdir(imgDir))
+    if randomFile.endswith('pkl'): randomFile = choice(os.listdir(imgDir))
     fpath = os.path.join(imgDir,randomFile)
     outputPNG1 = os.path.join(destDir,randomFile + '_scaled.png')
     outputPNG2 = os.path.join(destDir,randomFile + '_noScale.png')
@@ -71,9 +72,9 @@ def rescaleStitchImage(imgDir,destDir):
     print outputSTITCH 
 
 
-dateStamp = "2014-10-15"
-sourceDir = os.path.join("/project2/marcotte/boulgakov/microscope/2014-Oct",dateStamp)
-destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1/2014-Oct",dateStamp,"images")
+dateStamp = "2014-11-17"
+sourceDir = os.path.join("/project2/marcotte/boulgakov/microscope/2014-Nov",dateStamp)
+destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1/2014-Nov",dateStamp,"images")
 if not os.path.exists(destDir): os.makedirs(destDir)
 DIRNAMES = 1
 for dirname in os.walk(sourceDir).next()[DIRNAMES]:

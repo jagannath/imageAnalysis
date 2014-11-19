@@ -12,63 +12,16 @@ of that frame.
 """
 import sys
 sys.path.append('/project/marcotte/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
+#from Peaks import Peaks
 import scipy.misc
-import pflibMP
 import numpy as np
 import os
 from subprocess import call
-#import pflibMP
 import cPickle as pickle
 import collections
 import time
 from matplotlib import pyplot as plt
 
-
-
-class Peaks(object):
-    """
-    This is the peak finder algorithm (Alexander's) applied to the first frame.
-    The list of peaks at the coordinates and the corresponding 5x5 pixel area
-    for each of the peaks (h,w) is returned eventually
-    """
-    def __init__(self, inputTiff):
-        self.inputTiff = inputTiff
-        self. correlation_matrix=np.array([[-5935,-5935,-5935,-5935,-5935],
-                             [-5935,8027,8027,8027,-5935],
-                             [-5935,8027,30742,8027,-5935],
-                             [-5935,8027,8027,8027,-5935],
-                             [-5935,-5935,-5935,-5935,-5935]])
-
-    def convertPNG(self):
-        outputPNG = self.inputTiff + '.png'
-        cmd = "convert " + self.inputTiff + " " + outputPNG
-        call(cmd.split(),shell=False)
-        return outputPNG
-
-    def find_Peaks(self):
-        self.outputPNG = self.convertPNG()
-        img = scipy.misc.imread(self.outputPNG)
-        print "Finding Peaks in %s ...."%(self.outputPNG)
-            #peak fitting result tuple
-            #(0  1  2--  3------  4-------  5--------  6---  7--, 8--)
-            #(h, w, fit, fit_err, subimage, fit_image, rmse, r_2, s_n)
-            #agpy.gaussfit parameters --
-            # 0-----  1--------  2  3  4------  5------  6---
-            #(height, amplitude, x, y, width_x, width_y, rota)
-        results = pflibMP.fit_peaks([img],correlation_matrix=self.correlation_matrix)
-        allPeakResults = results[0][1]
-        return allPeakResults
-
-    def getPeakXY(self,peakResult):
-        h,w = peakResult[0],peakResult[1]
-        return (h,w)
-    
-    def picklePeakCoords(self,allPeakCoords):
-        ofname = self.inputTiff+'.pkl'
-        ofile = open(ofname,'w')
-        pickle.dump(allPeakCoords,ofile)
-        ofile.close()
-        return ofname
 
 class ImageDir(object):
     """
@@ -98,25 +51,68 @@ class ImageDir(object):
     def getAllIntensity(self,peakData):
         allIntensity = list()
         allSNR = list()
-        for peak in peakData:
-            subImage,snr = peak[4],peak[8]
-            peakImage = subImage[[[1],[2],[3]],[1,2,3]]
-            intensity = np.mean(peakImage)
-            allIntensity.append(intensity)
-            allSNR.append(snr)
+        for fname,allPeaks in peakData.items():
+            print "Retrieving peakData for %s"%(fname)
+            for peak in allPeaks:
+                subImage,snr = peak[4],peak[8]
+                peakImage = subImage[[[1],[2],[3]],[1,2,3]]
+                intensity = np.mean(peakImage)
+                allIntensity.append(intensity)
+                allSNR.append(snr)
+        print len(allIntensity)
         return allIntensity,allSNR
 
     def getPeakIntensity(self):
         # Gets the peak Intensity of all the peaks in all the files in the
         # subDir
         allIntensityList,allSNRList = list(),list()
-        pklFiles = self.getFiles('allPeaks.pkl')
+        pklFiles = self.getFiles('AllPeaks.pkl')
         for f in pklFiles:
             peakData = pickle.load(open(f))
             intensityList,snrList = self.getAllIntensity(peakData)
             allIntensityList.extend(intensityList)
             allSNRList.extend(snrList)
         return allIntensityList, allSNRList
+
+
+def drawBoxPlots(data_dict,combineExpt=True,type='Intensity'):
+    fig = plt.Figure(figsize=( 5,5),dpi=300)
+    name = "Mean_fluorescence_Atto647N_"+type
+    fpng = os.path.join(destDir,name+'.png')
+    fsvg = os.path.join(destDir,name+'.svg')
+    i = 0
+    print type
+
+    allData = list()
+    allLabels = list()
+    for dye,dataDir in sorted(data_dict.items()):
+        allVals = list()
+        i+=1
+        for subDir,val in dataDir:
+            if not combineExpt: print "check"
+            else: allVals.extend(val)
+        allData.append(allVals)
+        allLabels.append(dye)
+   
+    print np.amax(allData[0])
+    plt.boxplot(allData,notch=True,whis=2.0,patch_artist=True)
+    plt.xticks(range(1,len(allData)+1),(allLabels),fontsize=8)
+    plt.xlabel("Imaging Solvents")
+    if type is 'Intensity':
+        plt.ylim( 5000,25000)
+        plt.ylabel("Mean Intensity of the peak")
+    else:
+        plt.ylim( 0,30)
+        plt.ylabel("SNR of the peak")
+    plt.savefig(fpng)
+    plt.savefig(fsvg)
+    plt.close()
+
+
+
+
+
+
 
 
 
@@ -157,19 +153,7 @@ def drawHistogram(data_dict,combineExpt=True,type='Intensity'):
         plt.close()
     return True   
 
-def processPeakFit(img):
-
-
-    for fTif in img.tiffFiles:
-        print "Processing %s ...."%(fTif)
-        peakResults = img.getPeaks(fTif)
-        fpkl = fTif + '.allPeaks.pkl'
-        ofile = open(fpkl,'w')
-        pickle.dump(peakResults,ofile)
-        ofile.close()
-    return img
-
-def processDyeHistogram(dye_dict):
+def processDyeList(dye_dict):
     allDyesINT_dict = collections.defaultdict(list)
     allDyesSNR_dict = collections.defaultdict(list)
     for dye,pathDirs in dye_dict.items():
@@ -180,20 +164,23 @@ def processDyeHistogram(dye_dict):
             intensityList, snrList = dyeImg.getPeakIntensity()
             allDyesINT_dict[dye].append([subDir,intensityList])
             allDyesSNR_dict[dye].append([subDir,snrList])
+    #drawHistogram(allDyesINT_dict,type='Intensity')
+    #drawHistogram(allDyesSNR_dict,type='SNR')
+    drawBoxPlots(allDyesINT_dict,type='Intensity')
+    drawBoxPlots(allDyesSNR_dict,type='SNR')
 
-    drawHistogram(allDyesINT_dict,type='Intensity')
-    drawHistogram(allDyesSNR_dict,type='SNR')
 
 
 
-
-sourceDir = "/project2/marcotte/boulgakov/microscope/2014-July/2014-07-12"
+sourceDir = "/project2/marcotte/boulgakov/microscope/2014-Oct/2014-10-26"
 subDir = "Glass_Alexa555SE_200nM_Overnite_561_40Perc_flds001"
-destDir = "/project/marcotte/jagannath/projectfiles/compilationData/dyeStatistics/rhodamineComparisons"
+#destDir = "/project/marcotte/jagannath/projectfiles/compilationData/dyeStatistics/rhodamineComparisons"
+destDir = "/project2/marcotte/jaggu/dataAnalysis/microscope1/2014-Oct/2014-10-26/graphs"
+if not os.path.exists(destDir): os.makedirs(destDir)
 
 
 
-dye_dict ={'Blank':
+"""dye_dict ={'Blank':
            ["/project2/marcotte/boulgakov/microscope/2014-Oct/2014-10-02/ThiolSilane2_Blank_flds005"],
           'RhodamineB':
            ["/project2/marcotte/boulgakov/microscope/2014-Oct/2014-10-02/ThiolSilane_RhodBNHS_2fM_flds004"],
@@ -207,10 +194,28 @@ dye_dict ={'Blank':
            'Alexa555':
            ["/project2/marcotte/boulgakov/microscope/2014-July/2014-07-12/Glass_Alexa555SE_200nM_Overnite_561_40Perc_flds001"]
           }
+"""
 
-img = ImageDir(sourceDir,subDir)
-#img = processPeakFit(img)
-processDyeHistogram(dye_dict)
+dye_dict = {'Blank':
+            [os.path.join(sourceDir,"GlassAS3_Blank_flds001")],
+            'degasMeOH':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_deGasMeOH_flds006")],
+            'water':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_DMFWash_Water_flds004")],
+            'MeOH_\n10mMTrolox':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_MeOH_10mMTrolox_flds")],
+            'degasMeOH_\n2mMTrolox':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_deGasMeOH_2mMTrolox_flds001")],
+            'degasMeOH_\n10mMTrolox':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_deGasMeOH_10mMTrolox_flds002")],
+            'MeOH_\n2mMTrolox':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_MeOH_2mMTrolox_flds007")],
+            'MeOH':
+            [os.path.join(sourceDir,"GlassAS3_Atto647_20betaM_MeOH_flds005")]
+           }
+
+
+processDyeList(dye_dict)
 
 print "Completed"
 

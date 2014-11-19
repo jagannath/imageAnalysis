@@ -78,7 +78,6 @@ class BeadStacks(object):
         
         def _createBlur(orig):
             blur = cv2.medianBlur(orig,5)
-            #blur = cv2.bilateralFilter(orig,10,20,20)
             return blur 
 
         orig = cv2.imread(fname,0)
@@ -285,25 +284,18 @@ def test_case(subDir):
 
 
 
-
-
-
 if __name__ == '__main__':
-    monthIs =  {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct'}
-
-    #sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-July"
-    #dateStamp = "2014-07-31b"
-    #pathDir = os.path.join(sourceDir,dateStamp,"rawImages")
-    #subDir = "TentagelCOOH_Pept_NHS_Washed_100ms_flds011"
-    #test_case()
+    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov'}
 
     [ARG,dateStamp] = sys.argv[1:]
+
     epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
     rawDataDir = os.path.join(epiDir,"rawFiles")
     sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
     month = monthIs[dateStamp.split('-')[1]]
     exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
     pathDir = os.path.join(exptDir,"rawImages")
+    
     t0 = time.clock()
     if ARG == 'MASK':
         generateMask(pathDir)
@@ -319,33 +311,5 @@ if __name__ == '__main__':
     else:
         raise SystemExit("Incorrect argument")
     t1 = time.clock()
-    print ("Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0, time.strftime("%d %b %Y %H:%M:%S",time.localtime()))
-          )
-
-
-
-
-
-
-
-
-
-
-
-"""
-#### Test functions
-def test_summary(exptDir):
-    test = BeadExpt(exptDir)
-    print test.destDir
-    f = test.allcsv[0]
-    test.summarize()
-    test.outFullFile.close()
-    test.outShortFile.close()
-
-def test_case(subDir):
-    test = BeadStacks(subDir)
-    print "Processing %s ..."%(subDir)
-    print test.pathSubDir
-    test.computeBeadIntensity()
-
-"""
+    print ("Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0,
+                                                        time.strftime("%d %b %Y %H:%M:%S",time.localtime())))

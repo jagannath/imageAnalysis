@@ -40,6 +40,8 @@ def summarize(sourceDir,analysisDir):
     monthStamp = analysisDir.split('/')[-1]
     if not os.path.exists(analysisDir): os.makedirs(analysisDir)
     ofLong = open(os.path.join(analysisDir,monthStamp+'_LONG_SUMMARY.csv'),'w')
+    print ofLong
+
     ofshortname = os.path.join(analysisDir,monthStamp+'_SHORT_SUMMARY.csv')
     ofShort = open(ofshortname,'w')
     header = (
@@ -49,8 +51,6 @@ def summarize(sourceDir,analysisDir):
     ofShort.write("\t".join(header))
     print "Summarizing data for %s ..."%(sourceDir)
     for subDir in next(os.walk(sourceDir))[1]:
-        print subDir
-        sys.exit(1)
         if checkSubDir(subDir):
             nbrPeaksList,meansPeakList,meansBGList,meansSNRList = list(),list(),list(),list()
             fname = os.path.join(sourceDir,subDir,"subAnalysis",subDir+'.ALL_FILES_SUMMARY.csv')
@@ -73,7 +73,6 @@ def summarize(sourceDir,analysisDir):
             ofShort.write("\t".join([subDir,str(meanNbrPeaks),str(stdevNbrPeaks),str(meansPeak),str(stdevPeak),str(meansBG),
                       str(stdevBG),str(meansSNR),str(stdevSNR),"\n"]))
         
-
     ofLong.close()
     ofShort.close()
 
@@ -88,7 +87,7 @@ def main(sourceDir,analysisDir):
 
 
 if __name__ == '__main__':
-    month = {'10':'Oct'}
+    month = {'10':'Oct','11':'Nov'}
     [ARG, dateStamp] = sys.argv[1:]
     pathDir = "/project2/marcotte/boulgakov/microscope"
 

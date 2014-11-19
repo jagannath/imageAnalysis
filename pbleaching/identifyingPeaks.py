@@ -20,9 +20,6 @@ def checkSubDir(subDir):
     return flag
 
 
-
-
-
 def main(sourceDir):
     for subDir in next(os.walk(sourceDir))[1]:
         if checkSubDir(subDir):
@@ -42,13 +39,10 @@ def main(sourceDir):
             ofile.close()
             
 
-
-
 if __name__ == '__main__':
-    month = {'10':'Oct'}
+    month = {'10':'Oct','11':'Nov'}
     [ARG, dateStamp] = sys.argv[1:]
     pathDir = "/project2/marcotte/boulgakov/microscope"
-    #dateStamp = "2014-10-15"
     monthStamp = "2014-"+month[dateStamp.split('-')[1]]
     sourceDir = os.path.join(pathDir,monthStamp,dateStamp)
     main (sourceDir)

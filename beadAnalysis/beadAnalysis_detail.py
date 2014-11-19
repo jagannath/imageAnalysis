@@ -40,7 +40,7 @@ class PlotLineProfile(object):
         self.subDir = subDir
         self.nbrCircles = len(circles)
         self.lineImageDir = os.path.join(imageDir,"LineProfiles")
-        if not os.path.exists(self.lineImageDir): os.makedirs(self.lineImageDir)
+        #if not os.path.exists(self.lineImageDir): os.makedirs(self.lineImageDir)
 
     def defineFigure(self,nrows=13,ncols=1,figsize=( 10,10),fontsize=6,dpi=72):
         self.fig, self.axTupTup = plt.subplots(nrows=nrows,ncols=ncols,squeeze=False,figsize=figsize)
@@ -176,7 +176,7 @@ def sumProfiles(allXYDict,method='mean'):
     return (x,y)
 
 
-def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis',maskSource='DIC'):
+def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,method='mean',orientation='Xaxis',maskSource='DIC'):
     # Note = For accesing the images, the coordinates are read as (y,x) [rows
     # and cols]
 
@@ -214,6 +214,8 @@ def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation='Xaxis',mas
     
     fname = os.path.join(imageDir,subDir+'_'+maskSource+'_'+orientation+'_ALL_LINE_NORM.png')
     line._saveFig(fname)
+    plt.show()
+    sys.exit(1)
     plt.imshow(cimg,cmap='gray')
     name = fname[:-4]+'_'+maskSource+'_'+method+'_'+orientation+'.CIRCLES.png'
     plt.savefig(name)
@@ -238,7 +240,49 @@ def skip(name):
     for i in skipList:
         if i in name:flag=True
     return flag
-            
+
+def makeSymmetry(x,y):
+    # Half value is at 0.5
+    ylist = list()
+    xlen = int(len(x)/2)
+    for i in xrange(xlen):
+        yF = y[xlen-i]+y[xlen+i]
+        ylist.append(yF)
+    xlist = np.arange(0,1.,0.02)
+    return (xlist,ylist)
+
+def calcPosArea(x,y):
+    yPos = [i if i>0 else 0 for i in y ]
+    area = np.trapz(yPos,dx=0.02)
+    return area 
+
+
+def storeNegRef(db,fname):
+    ofile = open(fname,'w')
+    pickle.dump(db,ofile)
+    ofile.close()
+
+def makeLineProfilePlot(db,name,circleCount='NA'):
+    plt.close()
+    print "Number of Circles Counted : %d"%(circleCount)
+    fig,ax = plt.subplots(figsize=( 5,5),dpi=300)
+    x,y = sumProfiles(db,method='mean')
+    ax.plot(x,y,linewidth=3.0,color='#582A72')
+    ax.set_xlabel('Normalized Radial distance (with 10% outside bead region)')
+    ax.set_ylabel('Normalized Intensity deviation from median')
+    ax.set_ylim([-50,100])
+    plt.axhline(ls='-.',linewidth=1.0,color="#113B52")
+    ax = ax.text( 0.6,0.9,'n = '+str(circleCount)+' beads',fontsize=12,transform=ax.transAxes)   
+    fname = os.path.join(sourceImageDir,name+'_all.LineProfile')
+    fname1 = fname+'.svg'
+    fname2 = fname+'.png'
+    print "File Summed : %s "%(fname1)
+    plt.plot(x,y,linewidth=3.0,color="#47036D")
+    plt.savefig(fname1)
+    plt.savefig(fname2)
+    print "Done"
+    sys.exit(1) #Quiting before the negative subtraction
+
 
 def combineLinePlots(pathDir):
     print "Making Line Plots for folders in %s ..."%(pathDir)
@@ -247,15 +291,13 @@ def combineLinePlots(pathDir):
     orientation = 'Xaxis'
     method = 'mean'
     maskSource = 'DIC'
-    names = ["TentagelNH2_CR1IamTCEP_"+i for i in
-             ["Before","Zero"]]
+    names = ["TentagelNH2_JSPR002_EDC_"+i for i in
+             ["Zero_10ms","Zero_50ms","Before_10ms","Before_50ms","HZ","deBoc","Mock1","Edman2","Edman3","Edman4","Edman5"]]
     circleCount = 0
     for subDir in next(os.walk(pathDir))[1]:
         name = names[0] 
-
         if subDir.startswith(name):
             if not skip(subDir):
-
                 print "Processing %s ..."%(subDir)
                 imageDir = os.path.join(pathDir,subDir,"LineProfiles")
                 if not os.path.exists(imageDir): os.makedirs(imageDir)
@@ -267,20 +309,49 @@ def combineLinePlots(pathDir):
                     allXYDict = plot_LineIntensity(circles,orig,cimg,imageDir,subDir,orientation=orientation,maskSource=maskSource)
                     for k in allXYDict.keys():
                         globalXYDict[k].extend(allXYDict[k])
+
+    fnamePkl = os.path.join(sourceImageDir,name+'_all.LineProfile.pkl')   
+    storeNegRef(globalXYDict,fnamePkl)
     
-    print "Number of Circles Counted : %d"%(circleCount)
+    makeLineProfilePlot(globalXYDict,name,circleCount)
+    sys.exit(1)
     plt.close()
+    print "Number of Circles Counted : %d"%(circleCount)
     fig,ax = plt.subplots(figsize=( 5,5),dpi=300)
     x,y = sumProfiles(globalXYDict,method='mean')
     ax.plot(x,y,linewidth=3.0,color='#582A72')
-    ax.set_xlabel('Normalized distance')
-    ax.set_ylabel('Normalized Median Intensity')
-    ax = ax.text( 0.6,0.9,'# Circles ='+str(circleCount),fontsize=12,transform=ax.transAxes)   
-    fname = os.path.join(sourceImageDir,name+'_'+maskSource+'_'+method+'_all.LineProfile.png')
-    print "File Summed : %s "%(fname)
+    ax.set_xlabel('Normalized Radial distance (with 10% outside bead region)')
+    ax.set_ylabel('Normalized Intensity deviation from median')
+    ax.set_ylim([-50,100])
+    plt.axhline(ls='-.',linewidth=1.0,color="#113B52")
+    ax = ax.text( 0.6,0.9,'n = '+str(circleCount)+' beads',fontsize=12,transform=ax.transAxes)   
+    fname = os.path.join(sourceImageDir,name+'_all.LineProfile')
+    fname1 = fname+'.svg'
+    fname2 = fname+'.png'
+    print "File Summed : %s "%(fname1)
+    plt.plot(x,y,linewidth=3.0,color="#47036D")
+    plt.savefig(fname1)
+    plt.savefig(fname2)
+    print "Done"
+    sys.exit(1) #Quiting before the negative subtraction
+
+
+    
+    negRefPlot = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-Oct/2014-10-17/LinePlotsAll/TentagelNH2_RhodBCOOH_Zero_all.LineProfile.xyList.NEGREF.pkl" 
+    negRefxyList = pickle.load(open(negRefPlot))
+    xref,yref = zip(*negRefxyList)
+
+    yDiff = [y[j]-yref[j] for j in xrange(len(y))]
+    xF,yF = makeSymmetry(x,yDiff)
+    plt.plot(xF,yF,linewidth=3.0,color="#690000")
+    
+    print fname
     plt.savefig(fname)
 
-
+    area = calcPosArea(xF,yF)
+    print "Positive Area under curve : %f"%(area)
+    
+    return True
 
 def test_case(subDir):
     print "Testing %s"%(os.path.join(pathDir,subDir))
@@ -300,7 +371,6 @@ if __name__ == '__main__':
     month = monthIs[dateStamp.split('-')[1]]
     exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
     pathDir = os.path.join(exptDir,"rawImages")
-
 
     t0 = time.clock()
     if ARG == 'LINEPLOTS':
@@ -452,4 +522,3 @@ def makeRadialPlot(pathDir):
 
 
 """
-
