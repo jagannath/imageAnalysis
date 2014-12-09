@@ -214,8 +214,6 @@ def plot_LineIntensity(circles,orig,cimg,imageDir,subDir,method='mean',orientati
     
     fname = os.path.join(imageDir,subDir+'_'+maskSource+'_'+orientation+'_ALL_LINE_NORM.png')
     line._saveFig(fname)
-    plt.show()
-    sys.exit(1)
     plt.imshow(cimg,cmap='gray')
     name = fname[:-4]+'_'+maskSource+'_'+method+'_'+orientation+'.CIRCLES.png'
     plt.savefig(name)
@@ -281,7 +279,7 @@ def makeLineProfilePlot(db,name,circleCount='NA'):
     plt.savefig(fname1)
     plt.savefig(fname2)
     print "Done"
-    sys.exit(1) #Quiting before the negative subtraction
+    #sys.exit(1) #Quiting before the negative subtraction
 
 
 def combineLinePlots(pathDir):
@@ -291,8 +289,8 @@ def combineLinePlots(pathDir):
     orientation = 'Xaxis'
     method = 'mean'
     maskSource = 'DIC'
-    names = ["TentagelNH2_JSPR002_EDC_"+i for i in
-             ["Zero_10ms","Zero_50ms","Before_10ms","Before_50ms","HZ","deBoc","Mock1","Edman2","Edman3","Edman4","Edman5"]]
+    names = ["TentagelNH2_JSPR011_2_EDC_"+i for i in
+             ["Before_MeOH","Before_TFA1h","deFmoc_MeOH","deFmoc_TFA1h","Mock1_MeOH","Mock1_TFA1h","Edman1_MeOH","Edman1_TFA1h","Edman2_MeOH","Edman2_TFA1h"]]
     circleCount = 0
     for subDir in next(os.walk(pathDir))[1]:
         name = names[0] 
@@ -311,10 +309,10 @@ def combineLinePlots(pathDir):
                         globalXYDict[k].extend(allXYDict[k])
 
     fnamePkl = os.path.join(sourceImageDir,name+'_all.LineProfile.pkl')   
-    storeNegRef(globalXYDict,fnamePkl)
+    #storeNegRef(globalXYDict,fnamePkl)
     
     makeLineProfilePlot(globalXYDict,name,circleCount)
-    sys.exit(1)
+    #sys.exit(1)
     plt.close()
     print "Number of Circles Counted : %d"%(circleCount)
     fig,ax = plt.subplots(figsize=( 5,5),dpi=300)
@@ -362,7 +360,7 @@ def test_case(subDir):
     if len(circles)>0: plot_LineIntensity(circles,orig,cimg,imageDir,subDir)
 
 if __name__ == '__main__':
-    monthIs =     {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct'}
+    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
     epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
@@ -382,7 +380,7 @@ if __name__ == '__main__':
         month = monthIs[dateStamp.split('-')[1]] 
         pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
         subDir = "TentagelNH2_JSPR003C_Before_5s_flds008"
-        imageDir = os.path.join(pathDir,subDir,"Graphs")
+        #imageDir = os.path.join(pathDir,subDir,"Graphs")
         test_case(subDir)
     else:
         raise SystemExit("Incorrect argument")

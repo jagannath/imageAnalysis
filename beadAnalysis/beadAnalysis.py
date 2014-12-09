@@ -285,7 +285,7 @@ def test_case(subDir):
 
 
 if __name__ == '__main__':
-    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov'}
+    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
 
