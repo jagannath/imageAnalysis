@@ -5,14 +5,6 @@
 
 
 
-
-
-
-
-
-
-
-
 ######### LINE PLOTTING FUNCTION ######################
 
 def plot_LineIntensity(circles,imageDir,subDir):

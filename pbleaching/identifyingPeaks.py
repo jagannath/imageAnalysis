@@ -40,7 +40,7 @@ def main(sourceDir):
             
 
 if __name__ == '__main__':
-    month = {'10':'Oct','11':'Nov'}
+    month = {'10':'Oct','11':'Nov','12':'Dec'}
     [ARG, dateStamp] = sys.argv[1:]
     pathDir = "/project2/marcotte/boulgakov/microscope"
     monthStamp = "2014-"+month[dateStamp.split('-')[1]]
