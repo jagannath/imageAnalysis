@@ -47,7 +47,16 @@ class RadialProfile:
                   ('green','#88a61b'),
                   ('blue','#0e3d59'))
         self.selcolor = dict(colors)
-        
+
+    def writeNbrCircles(self,nbrCircles,ax):
+        s = 'n = '+str(nbrCircles)+' beads'
+        ax.text( 0.7,0.9,s,
+                horizontalalignment='center',
+                verticalalignment='center',
+                transform = ax.transAxes
+               )
+        return ax
+    
     def drawProfile(self,xyDict,fname,nbrCircles=int(),col='blue'):
         type1 = '.png'
         type2 = '.svg'
@@ -56,13 +65,7 @@ class RadialProfile:
         normXList = [x/50 for x in xList]
         yList = xyDict.values()
         ax.plot(normXList,yList,color=self.selcolor[col],lw='4')
-        if nbrCircles: 
-            s = 'n = '+str(nbrCircles)+' beads'
-            ax.text( 0.7,0.9,s,
-                    horizontalalignment='center',
-                    verticalalignment='center',
-                    transform = ax.transAxes
-                   )
+        if nbrCircles: ax = self.writeNbrCircles(nbrCircles,ax)
         ax.set_ylim([0,60000])
         ax.xaxis.set_major_locator(my_xlocator)
         ax.yaxis.set_major_locator(my_ylocator)
@@ -73,6 +76,25 @@ class RadialProfile:
         self.fig.savefig(fname+type1) 
         self.fig.savefig(fname+type2)
         plt.close()
+
+    def drawProfileWstdev(self,xList,yList,yStd_plus,yStd_minus,fname,nbrCircles=int(),ylim=[0,60000],col='red'):
+        type1 = '.png'
+        type2 = '.svg'
+        ax = self.fig.add_subplot(111)
+        ax.plot(xList,yList,color=self.selcolor[col],lw='4')
+        ax.fill_between(xList,yStd_plus,yStd_minus,color=self.selcolor[col],alpha=0.5)
+        if nbrCircles: ax = self.writeNbrCircles(nbrCircles,ax)        
+        ax.set_ylim(ylim)
+        ax.xaxis.set_major_locator(my_xlocator)
+        ax.yaxis.set_major_locator(my_ylocator)
+        ax.set_xlabel('Normalized Radial Distance')
+        ax.set_ylabel('Normalized Intensity ')
+        ax.set_adjustable('box')
+        print "Saving File %s"%(fname+type1)
+        self.fig.savefig(fname+type1) 
+        self.fig.savefig(fname+type2)
+        plt.close()
+
 
     def combinePlots(self,packList,fname):
         type1 = '.png'

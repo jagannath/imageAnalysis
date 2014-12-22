@@ -104,7 +104,7 @@ class Bead:
         return self.xyNorm_dict
 
 class BeadsImage:
-    def __init__(self,subDir,pathDir,isNeg=False):
+    def __init__(self,subDir,pathDir,flChannel=4,isNeg=False):
         self.subDir = subDir
         self.pathDir = pathDir
         self.isNeg = isNeg
@@ -113,7 +113,7 @@ class BeadsImage:
             self.negShapeProfile = pickle.load(open(negF))
         self.beadsImg = BeadExpt(self.subDir,self.pathDir)
         self.dicFname = self.beadsImg._getImageName(c=1)
-        self.flFname = self.beadsImg._getImageName(c=4) #Fluorescent channel
+        self.flFname = self.beadsImg._getImageName(c=flChannel) #Fluorescent channel
 
     def subDict(self,adict,negDict):
         tmpDict = dict()
@@ -137,19 +137,127 @@ class BeadsImage:
             if circle[2]>minRad:
                 oneBead = Bead(circle,fl_orig,fl_cimg)
                 allNormLineProfiles_dict = oneBead.makeLineProfile()
-                meanProfile = combineVal_dict(allNormLineProfiles_dict)
+                meanProfile,stdevProfile = combineVal_dict(allNormLineProfiles_dict)
                 (med,factor), devMedian, normDevMedian = calcDevMed_dict(meanProfile)
                 shapeProfile = normDevMedian
                 if not self.isNeg:
                     diffShape = self.subDict(shapeProfile,self.negShapeProfile)
                     reNorm = dict([(k,(v*factor)+med) for k, v in diffShape.items()])
                     allNormDeviation_dict = appendDict(allNormDeviation_dict,reNorm)
-                    #allNormDeviation_dict = appendDict(allNormDeviation_dict,devMedian)
                 else:
                     allNormDeviation_dict = appendDict(allNormDeviation_dict,shapeProfile)
 
-        imageLineProfile = combineVal_dict(allNormDeviation_dict)
-        return imageLineProfile
+        imageLineProfile,stdevLineProfile = combineVal_dict(allNormDeviation_dict)
+        return imageLineProfile,stdevLineProfile
+
+class ExperimentType:
+    """
+    This class performs a number of functions useful for plotting and
+    calculating efficiency of Edman. It also makes pklfiles for the general
+    rawProfile and also processed profiles
+    """
+    def __init__(self,pathDir,exptType,flChannel=4):
+        self.pathDir = pathDir
+        self.exptType = exptType
+        self.flChannel = flChannel
+        self.pklDir = os.path.join(os.path.split(pathDir)[0],'pklFiles')
+        if not os.path.exists(self.pklDir): os.makedirs(self.pklDir)
+
+    def pickleIt(self,data,tag):
+        fname = self.exptType + tag
+        pklF = os.path.join(self.pklDir,fname)
+        pickle.dump(data,open(pklF,'w'))
+        return pklF 
+
+    def combineProfiles(self):
+        allExptType_dict = collections.defaultdict(list)
+        totalBeads = int()
+        for subDir in next(os.walk(self.pathDir))[1]:
+            if self.exptType in subDir and not 'zS' in subDir:
+                expt = BeadsImage(subDir,self.pathDir,flChannel=self.flChannel)
+                allCircles = expt.makeHoughCircles()
+                totalBeads+=len(allCircles[0])
+                print "Number of Circles : %d"%len(allCircles[0])
+                allNormDev,stdevLineProfile = expt.makeAllLinePlots(allCircles,minRad=10)
+                allExptType_dict = appendDict(allExptType_dict,allNormDev)
+        meanExptProfile,stdevExptProfile = combineVal_dict(allExptType_dict)
+        return meanExptProfile,stdevExptProfile,totalBeads
+
+    def reduceLineProfile(self,lineProfile,stdevProfile):
+        reduceDict = dict()
+        reduceStdevDict = dict()
+        min = np.amin(lineProfile.values())
+        for k,v in lineProfile.items():
+            _v = (v - min)
+            reduceDict[k] = _v
+            _vStdev = stdevProfile[k]#STDEV DOESNT CHANGE 
+            reduceStdevDict[k] = _vStdev
+        return reduceDict, reduceStdevDict
+
+
+    def rescaleLineProfile(self,exptProfile,stdevProfile):
+        rescaleDict = dict()
+        rescaleStdevDict = dict()
+        min, max = np.amin(exptProfile.values()),np.amax(exptProfile.values())
+        newMax = max
+        range = max - min
+        for k,v in exptProfile.items():
+            _v = (v - min)*(newMax/range)
+            rescaleDict[k] = _v
+            vStdev = stdevProfile[k]
+            _vStdev = vStdev/range
+            rescaleStdevDict[k] = _vStdev
+        return rescaleDict,rescaleStdevDict
+
+    def calcAUC(self,xyDict,stdevDict):
+        x,y = np.array(xyDict.keys()),np.array(xyDict.values())
+        area = np.trapz(y,x=x)
+
+        yStdev = np.array(stdevDict.values())
+        yPlus,yMinus = y+yStdev,y-yStdev
+        areaPlus = np.trapz(yPlus,x=x)
+        areaMinus = np.trapz(yMinus,x=x)
+        areaStdev = np.std([areaPlus,area,areaMinus])
+
+        return area,areaStdev
+
+
+
+class RadialPlotFigure:
+    """
+    This class handles the plotting of the different function. It mainly relies
+    on the pkl Files generated.
+    """
+    def __init__(self,pathDir,exptType):
+        self.pklDir = os.path.join(os.path.split(pathDir)[0],'pklFiles')
+        self.pathDir = pathDir
+        self.exptType = exptType
+        self.xBin = 50
+        self.radPlotDir = os.path.join(os.path.split(pathDir)[0],'allRadialPlots')
+        if not os.path.exists(self.radPlotDir): os.makedirs(self.radPlotDir)
+        print "In RadialPlotFigure"
+
+    def getYStdev(self,lineProfile,stdevProfile):
+        yVal = np.array(lineProfile.values())
+        yStd = np.array(stdevProfile.values())
+        yPlus,yMinus = yVal+yStd,yVal-yStd
+        return yPlus,yMinus
+
+    def drawRadialProfile(self,pklTag,fnameTag):
+        pklF = os.path.join(self.pklDir,self.exptType+pklTag)
+        fname = os.path.join(self.radPlotDir,self.exptType+'.'+fnameTag)
+        nbrBeads,lineProfile,stdevProfile = pickle.load(open(pklF))
+        yPlus,yMinus = self.getYStdev(lineProfile,stdevProfile)
+        rawXList = lineProfile.keys()
+        xList = [x/self.xBin for x in rawXList]
+        yList = lineProfile.values()
+        pf = RadialProfile(self.pathDir)
+        ymaxLimit = 1.2*np.amax(yPlus)
+        if 'reduced' in pklTag: ylim = ( 0,ymaxLimit)
+        else: ylim = (0, ymaxLimit)
+        pf.drawProfileWstdev(xList,yList,yPlus,yMinus,fname,nbrCircles=nbrBeads,ylim=ylim)
+        return True
+
 
 ## END OF CLASS ##
 
@@ -159,9 +267,11 @@ def combineVal_dict(adict,type='mean'):
     combine them; default is mean; Keys have to be maintained
     """
     tmpDict = dict()
+    tmpDictStdev = dict()
     for k,v in adict.items():
         tmpDict[k]=np.mean(v)
-    return tmpDict
+        tmpDictStdev[k] = np.std(v)
+    return tmpDict,tmpDictStdev
 
 def calcDevMed_dict(adict):
     """
@@ -209,27 +319,31 @@ def negControl(pathDir,subDir):
             allCircles = negCntrl.makeHoughCircles()
             negShapeProfile = negCntrl.makeAllLinePlots(allCircles,minRad=50)
             allNegTypeProfile_dict = appendDict(allNegTypeProfile_dict,negShapeProfile)
-    meanNegProfile = combineVal_dict(allNegTypeProfile_dict)
+    meanNegProfile,stdevNegProfile = combineVal_dict(allNegTypeProfile_dict)
     fname = os.path.join(pathDir,'negShape.pkl')
     print "Neg Shape Profile .pkl file saved : %s"%(fname)
     pickle.dump(meanNegProfile,open(fname,'w'))
     plt.plot(meanNegProfile.keys(),meanNegProfile.values())
     plt.show()
 
+## MAIN FUNCTIONS
+
 def drawFigures(pathDir):
     pklDir = os.path.join(os.path.split(pathDir)[0],'pklFiles')
-    radPlotDir = os.path.join(os.path.split(pathDir)[0],'allRadialPlots')
-    if not os.path.exists(radPlotDir): os.makedirs(radPlotDir)
-    pklFiles = [os.path.join(pklDir,f) for f in os.listdir(pklDir)]
-    combineExptPlots(pathDir,pklDir,radPlotDir)
+    pklFiles = locate('*.pkl',pklDir)
+    #combineExptPlots(pathDir,pklDir,radPlotDir)
     for pklF in pklFiles:
         exptType = os.path.split(pklF)[1].split('.')[0]
-        pf = RadialProfile(pathDir)
-        fname = os.path.join(radPlotDir,exptType+'.radProfile')
-        [nbrCircles,lineprofile] = pickle.load(open(pklF,'r'))
-        pf.drawProfile(lineprofile,fname,nbrCircles=nbrCircles)
-    
+        
+        plotType1 = RadialPlotFigure(pathDir,exptType)
+        fnameTag1 = 'radProfile.stdev'
+        plotType1.drawRadialProfile('.meanLineProfile.dict.pkl',fnameTag1)
 
+        plotType2 = RadialPlotFigure(pathDir,exptType)
+        fnameTag2 = 'radProfile.reduced.stdev'
+        plotType2.drawRadialProfile('.meanLineProfile.reduced.stdev.dict.pkl',fnameTag2)
+        
+        
 def combineExptPlots(pathDir,pklDir,radPlotDir):
     pep = 'TentagelNH2_JSPR011_2_EDC_'
     
@@ -244,40 +358,33 @@ def combineExptPlots(pathDir,pklDir,radPlotDir):
     pf = RadialProfile(pathDir)
     pf.combinePlots(packedList,fname)
     
-
-
-def combineProfiles(pathDir,exptType):
-    allExptType_dict = collections.defaultdict(list)
-    totalBeads = int()
-    for subDir in next(os.walk(pathDir))[1]:
-        if exptType in subDir and not 'zS' in subDir:
-            expt = BeadsImage(subDir,pathDir)
-            allCircles = expt.makeHoughCircles()
-            totalBeads+=len(allCircles[0])
-            print "Number of Circles : %d"%len(allCircles[0])
-            allNormDev = expt.makeAllLinePlots(allCircles,minRad=10)
-            allExptType_dict = appendDict(allExptType_dict,allNormDev)
-    meanExptProfile = combineVal_dict(allExptType_dict)
-    return meanExptProfile,totalBeads
-
-
-def main(pathDir):
+def main(pathDir,dateStamp,exptDIr):
     # Makes PKL file : exptType.meanLineProfile.dict.pkl: [nbrBeads,dict]
-    pklDir = os.path.join(os.path.split(pathDir)[0],'pklFiles')
+    ofname = os.path.join(exptDir,dateStamp+'_RADIALSUMMARY.csv')
+    ofile = open(ofname,'w')
+    header = '\t'.join(['pickleFname','Experimental Step','MEAN AUC','STDEV AUC','\n'])
+    ofile.write(header)
+
+    pklDir = os.path.join(exptDir,'pklFiles')
     if not os.path.exists(pklDir): os.makedirs(pklDir)
     allFnames = [f for f in os.listdir(pathDir) if
                  os.path.isfile(os.path.join(pathDir,f))]
     allExptTypes = set(['_'.join(f.split('_')[:-1])  for f in allFnames])
     for exptType in allExptTypes:
         print "Expt type: %s"%(exptType)
-        meanExptProfile,totalBeads = combineProfiles(pathDir,exptType)
-        exptDetails = [totalBeads,meanExptProfile]
-        fpkl = os.path.join(pklDir,exptType+'.meanLineProfile.dict.pkl')
-        pickle.dump(exptDetails,open(fpkl,'w'))
-    # Plotting the radial plots
-    drawFigures(pathDir)
-    
+        exptStep = ExperimentType(pathDir,exptType,flChannel=5)
+        meanExptProfile,stdevExptProfile,totalBeads = exptStep.combineProfiles()
 
+        exptDetails = [totalBeads,meanExptProfile,stdevExptProfile]
+        exptStep.pickleIt(exptDetails,'.meanLineProfile.dict.pkl')
+        
+        reduceLine,reduceStdev = exptStep.reduceLineProfile(meanExptProfile,stdevExptProfile)
+        pklPath = exptStep.pickleIt([totalBeads,reduceLine,reduceStdev],'.meanLineProfile.reduced.stdev.dict.pkl')
+        area,areaStdev = exptStep.calcAUC(reduceLine,reduceStdev)
+        
+        info = [pklPath,exptType,str(area),str(areaStdev),'\n']
+        ofile.write('\t'.join(info))
+        
 
 if __name__ == '__main__':
     monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','12':'Dec'}
@@ -294,7 +401,7 @@ if __name__ == '__main__':
     if ARG == 'RADIALPLOT':
         sourceImageDir = os.path.join(exptDir,"LinePlotsAll")
         if not os.path.exists(sourceImageDir): os.makedirs(sourceImageDir)
-        main(pathDir)
+        main(pathDir,dateStamp,exptDir)
     elif ARG == 'PLOT':
         drawFigures(pathDir)
     elif ARG == 'NEGCONTROL':
@@ -308,8 +415,6 @@ if __name__ == '__main__':
         month = monthIs[dateStamp.split('-')[1]] 
         pathDir = os.path.join(sourceDir,"2014-"+month,dateStamp,"rawImages")
         subDir = "TentagelNH2_JSPR010_2_EDC_Before_MeOH_50ms_flds"
-        #subDir = "TentagelNH2_JSPR010_2_EDC_Edman1_TFA1h_50ms_flds022"
-        #subDir = "TentagelNH2_JSPR010_2_EDC_Edman2_TFA1h_50ms_flds036"
         #imageDir = os.path.join(pathDir,subDir,"Graphs")
         test_case(subDir)
     else:

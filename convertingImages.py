@@ -115,10 +115,10 @@ def rescaleStitchImage(imgDir,destDir):
     print outputSTITCH 
 
 
-dateStamp = "2014-12-03"
+dateStamp = "2014-12-13"
 #sameLetter = None
 dirConvert = []
-sameLetter = 'E'
+sameLetter = 'A'
 #dirConvert = ["/project2/marcotte/boulgakov/microscope/2014-Nov/2014-11-29/DiAS1_JSPR0112_200nM_deFmoc_TFA1h_561_flds013"]
 sourceDir = os.path.join("/project2/marcotte/boulgakov/microscope/2014-Dec",dateStamp)
 destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1/2014-Dec",dateStamp,"images")
