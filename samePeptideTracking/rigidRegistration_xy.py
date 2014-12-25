@@ -31,10 +31,12 @@ def RigidRegistrationXY_guess(img,ximg):
     # List contains displacement in x and y and rotation
     
     param = [x,y]
-    print "Initial Guess : %d, %d"%(x,y)
 
-    guess = [x,y]
-    return guess
+    #Final transformation
+    _img = ximg.copy()
+    _img = ndimage.shift(_img,param)                  
+    
+    return (_img,param)
 
 
 def RigidRegistrationXY(img,ximg):
@@ -51,8 +53,6 @@ def RigidRegistrationXY(img,ximg):
     # List contains displacement in x and y and rotation
     
     param = [x,y]
-    print "Initial Guess : %d, %d"%(x,y)
-    guess = [x,y]
     
     def ErrFunc(param,img=img,ximg=ximg):
         

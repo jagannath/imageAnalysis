@@ -314,15 +314,6 @@ def getFpaths(frame):
 
     return allFpaths
 
-def getAllPeaks(fpaths,pepCh):
-    allPepFpaths = [f[pepCh] for f in fpaths]
-    allPeakPos = list()
-    for fc1 in allPepFpaths:
-        tif = TifImage(fc1)
-        allPeakPos.extend(tif.getAllPeakPositions())
-
-    return allPeakPos
-
 
 
 def test_case():
@@ -345,9 +336,6 @@ def test_case():
         f1c2,f2c2 = allFpaths[cycle1][ref],allFpaths[cycle2][ref]
         twoCycles = AlignImages(f1c2,f2c2)
         offset = twoCycles.calculateOffset()
-        aligned,overlay = overlayImages(f1c2,f2c2,offset)
-        simpleShow(aligned[1])
-        sys.exit(1)
         fp = FollowPeaks(f1c1,f2c1,offset)
         nbrf1c1,nbrf2c1,notMappedPeaks,mappedPeaks = fp.getPeakSummary()
         print "Summary in channel : %d"%(pepCh)
@@ -356,6 +344,8 @@ def test_case():
         print "Peaks in f1 not mapped to f2 : %d" %(notMappedPeaks)
         print "Peaks in f1 mapped to f2 : %d"%(mappedPeaks)
         print "#############################"
+
+    
 
 if __name__ == '__main__':
     monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','12':'Dec'}

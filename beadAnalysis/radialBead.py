@@ -253,7 +253,8 @@ class RadialPlotFigure:
         yList = lineProfile.values()
         pf = RadialProfile(self.pathDir)
         ymaxLimit = 1.2*np.amax(yPlus)
-        if 'reduced' in pklTag: ylim = ( 0,ymaxLimit)
+        ymaxredLimit = 40000
+        if 'reduced' in pklTag: ylim = ( 0,ymaxredLimit)
         else: ylim = (0, ymaxLimit)
         pf.drawProfileWstdev(xList,yList,yPlus,yMinus,fname,nbrCircles=nbrBeads,ylim=ylim)
         return True
@@ -372,7 +373,7 @@ def main(pathDir,dateStamp,exptDIr):
     allExptTypes = set(['_'.join(f.split('_')[:-1])  for f in allFnames])
     for exptType in allExptTypes:
         print "Expt type: %s"%(exptType)
-        exptStep = ExperimentType(pathDir,exptType,flChannel=5)
+        exptStep = ExperimentType(pathDir,exptType,flChannel=4)
         meanExptProfile,stdevExptProfile,totalBeads = exptStep.combineProfiles()
 
         exptDetails = [totalBeads,meanExptProfile,stdevExptProfile]

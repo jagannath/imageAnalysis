@@ -60,9 +60,9 @@ class BeadExpt(object):
     def overLayHoughCircles(self,circles,cimg,idx=1,putNbr=False):
         # Overlays the circles over the image;
         # Returns a fname and the overlayed img; Doesnt save
-        if circles is not None:
+        if len(circles) != 0:
             #if len(circles[0])>20: return circMask, ringMask #Something is really wrong if there are more than 20 circles detected
-            for nbr, c in enumerate(circles[0][0:20]):
+            for nbr, c in enumerate(circles[0]):
                 rad = int(c[2])
                 cv2.circle(cimg,(c[0],c[1]),rad,( 136,166,27),thickness=5)               
                 if putNbr:
@@ -81,9 +81,9 @@ class BeadExpt(object):
         fig.add_axes(ax)
         ax.imshow(cimg,cmap='gray',aspect='normal')
         ax.set_adjustable('box-forced')
-        if circles is not None:
+        if len(circles) != 0:
             #print "Number of Circles found : %d ..."%len(circles[0])
-            for nbr, c in enumerate(circles[0][0:20]):
+            for nbr, c in enumerate(circles[0]):
                 rad = int(c[2])
                 x0,y0 = int(c[0]),int(c[1])
                 circle = plt.Circle((x0,y0),rad,

@@ -36,7 +36,7 @@ def heatMapImage(img,cmap='Reds',transpose=False):
 def colorImage(img,color='Reds',stretch='linear'):
     # Making my own color map
     if color is 'black_green':
-        cdict = {'red': ((0.0,  0.0, 0.0),
+        cdict = {'red': ((0.0,  0.0, 1.0),
                         (0.5,  0.0, 0.0),
                         (1.0,  0.0, 0.0)),
           
@@ -65,6 +65,101 @@ def colorImage(img,color='Reds',stretch='linear'):
                         (1.0,  0.0, 0.0))}
         colormap = LinearSegmentedColormap('black_red',cdict)
 
+    elif color is 'black_orange':
+        cdict = {'green': ((0.0,  0.0, 0.0),       
+                        (0.15, 0.0, 0.0),
+                        (1.0,  0.57, 0.57)),
+          
+              'red':   ((0.0,  0.0, 0.0),
+                       (0.15, 0.0, 0.0),
+                       (0.75, 1.0, 1.0),
+                       (1.0,  1.0, 1.0)),
+          
+              'blue':  ((0.0,  0.0, 0.0),
+                       (0.5,  0.0, 0.0),
+                       (1.0,  0.0, 0.0))}
+        colormap = LinearSegmentedColormap('black_orange',cdict)
+    elif color is 'black_blue':
+        cdict = {'green': ((0.0,  0.0, 0.0),
+                           (0.15, 0.0, 0.0),
+                           (0.75, 0.637, 0.637),
+                           (1.0,  0.637, 0.630)),
+            
+              'red':   ((0.0,  0.0, 0.0),
+                        (0.15, 0.0, 0.0),
+                        (0.75, 0.05, 0.05),
+                        (1.0,  0.055, 0.055)),
+          
+              'blue':  ((0.0,  0.0, 0.0),
+                        (0.15, 0.0, 0.0),
+                        (0.75, 0.95, 0.95),
+                       (1.0,  0.975, 0.975))}
+        colormap = LinearSegmentedColormap('black_blue',cdict)
+
+    elif color is 'white_blue':
+        cdict = {'green': ((0.0,  0.0, 0.0),       
+                           (0.05, 0.49, 0.49),
+                            (0.75, 0.0, 0.0),
+                            (1.0,  0.0, 0.0)),
+          
+                  'red':   ((0.0,  0.0, 0.0),
+                           (0.05, 0.29, 0.29),
+                           (0.75, 0.0, 0.0),
+                           (1.0,  0.0, 0.0)),
+          
+                  'blue':  ((0.0,  0.0, 0.0),
+                            (0.05, 0.98, 0.98),
+                            (0.75, 1.0, 1.0),
+                           (1.0,  1.0, 1.0))}
+        colormap = LinearSegmentedColormap('white_blue',cdict)       
+    elif color is 'white_orange':
+        cdict = {'green': ((0.0, 0.0, 0.0),              
+                        (0.05, 0.92, 0.92),
+                        (0.75, 0.49,0.49),
+                        (1.0,  0.49, 0.49)),
+          
+              'red':   ((0.0, 0.0, 0.0),
+                       (0.05, 1.0, 1.0),
+                       (0.75, 1.0, 1.0),
+                       (1.0,  1.0, 1.0)),
+          
+              'blue':  ((0.0,  0.0, 0.0),
+                       (0.05,  0.4, 0.4), 
+                       (1.0, 0.0, 0.0))}                       
+        colormap = LinearSegmentedColormap('white_orange',cdict)          
+    elif color is 'black_yellow':
+        cdict = {   'red':      ((0.0,  0.0, 0.0),       
+                                (0.65, 1.0, 1.0),
+                                (0.95, 1.0, 1.0),
+                                (1.0,  1.0, 1.0)),
+          
+                    'green':    ((0.0,  0.0, 0.0),
+                                (0.65, 0.655, 0.655),#FFAA00
+                                (0.95, 0.749, 0.749),#FFBF00
+                                (1.0,  1.0, 1.0)),#FFFF00
+          
+                    'blue':     ((0.0,  0.0, 0.0),
+                                (0.65, 0.0, 0.0),
+                                (0.95, 0.0, 0.0),
+                                (1.0,  0.0, 0.0))}
+        colormap = LinearSegmentedColormap('black_yellow',cdict)          
+    elif color is 'black_purple':
+        cdict = {   'red':      ((0.0,  0.0, 0.0),       
+                                (0.75, 0.0, 0.0),
+                                (0.95, 0.082, 0.082),
+                                (1.0,  0.51, 0.51)),
+          
+                    'green':    ((0.0,  0.0, 0.0),
+                                (0.75, 0.0, 0.0),
+                                (0.95, 0.14, 0.14),
+                                (1.0,  0.0, 0.0)),
+          
+                    'blue':     ((0.0,  0.0, 0.0),
+                                (0.75, 1.0, 1.0),#0000F
+                                (0.95, 0.584, 0.584),
+                                (1.0,  0.29, 0.29))} 
+        colormap = LinearSegmentedColormap('black_purple',cdict)          
+    
     else: colormap = color
 
     hdim,wdim = img.shape
@@ -84,26 +179,26 @@ def colorImage(img,color='Reds',stretch='linear'):
     return rgb_img
 
 def makeCmap():
-    print "making cmap"
-    cdict = {'green': ((0.0,  0.0, 0.0),
-                    (0.5,  0.0, 0.0),
-                    (1.0,  0.0, 0.0)),
-          
-          'red': ((0.0,  0.0, 0.0),
-                    (0.25, 0.0, 0.0),
-                    (0.75, 1.0, 1.0),
-                    (1.0,  1.0, 1.0)),
-          
-          'blue':  ((0.0,  0.0, 0.0),
-                    (0.5,  0.0, 0.0),
-                    (1.0,  0.0, 0.0))}
-
-
     from matplotlib.colors import LinearSegmentedColormap
     import matplotlib.cm as cm
     import sys
-    newcdict = cm.get_cmap('gist_heat')._segmentdata
-    #print newcdict['red'][0]
+
+    print "making cmap"
+    print "making black-yellow"
+    cdict = {   'red':      ((0.0,  0.0, 0.0),       
+                            (0.25, 1.0, 1.0),
+                            (0.75, 1.0, 1.0),
+                            (1.0,  1.0, 1.0)),
+          
+                'green':    ((0.0,  0.0, 0.0),
+                            (0.25, 0.655, 0.655),#FFAA00
+                            (0.75, 0.749, 0.749),#FFBF00
+                            (1.0,  1.0, 1.0)),#FFFF00
+          
+                'blue':     ((0.0,  0.0, 0.0),
+                            (0.25, 0.0, 0.0),
+                            (0.75, 0.0, 0.0),
+                            (1.0,  0.0, 0.0))}
 
     x = np.arange(0, np.pi, 0.1)
     y = np.arange(0, 2*np.pi, 0.1)
@@ -115,6 +210,34 @@ def makeCmap():
     plt.colorbar()
     plt.show()
 
-makeCmap()
+    print "making black-purple"
+    cdict = {   'red':      ((0.0,  0.0, 0.0),       
+                            (0.25, 0.0, 0.0),
+                            (0.75, 0.082, 0.082),
+                            (1.0,  0.51, 0.51)),
+          
+                'green':    ((0.0,  0.0, 0.0),
+                            (0.25, 0.0, 0.0),
+                            (0.75, 0.14, 0.14),
+                            (1.0,  0.0, 0.0)),
+          
+                'blue':     ((0.0,  0.0, 0.0),
+                            (0.25, 1.0, 1.0),#0000F
+                            (0.75, 0.584, 0.584),
+                            (1.0,  0.29, 0.29))} 
+    plt.close()
+    my_cmap = LinearSegmentedColormap('new_cmap',cdict)
+    plt.imshow(Z,cmap=my_cmap)
+    plt.colorbar()
+    plt.show()
+
+
+
+
+
+
+
+
+#makeCmap()
 
 
