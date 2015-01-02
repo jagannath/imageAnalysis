@@ -1,2 +1,0 @@
-ALEX: Parallelize convert through a separate script or integrate parallel convert into the library.
-ALEX: Astropy as 2D Gaussian fitter.
