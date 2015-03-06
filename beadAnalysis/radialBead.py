@@ -5,14 +5,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 import sys
-sys.path.append('/project/marcotte/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
+sys.path.append('/project/current/project/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
 from commonFunctions import locate,simpleShow
 import cPickle as pickle
 import collections
 import time
 from beadExperiment import BeadExpt
 from radialProfileFigure import RadialProfile
-
 
 class Bead:
     """
@@ -25,7 +24,7 @@ class Bead:
         self.x0, self.y0,self.r = map(int,circle)
         self.orig = orig
         self.cimg = cimg #Needed for drawing lines
-        self.approxRad = 50 
+        self.approxRad = 30 
         # This determines the granularity of the binning; Essential when dealing
         # with comparing beads of differing radius.
         self.lineExt = self.r * 1.2
@@ -109,7 +108,7 @@ class BeadsImage:
         self.pathDir = pathDir
         self.isNeg = isNeg
         if not self.isNeg: 
-            negF = '/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-Oct/2014-10-17/rawImages/negShape.pkl'
+            negF = '/project/current/project/jagannath/projectfiles/EpiMicroscopy/rawFiles/2014-Oct/2014-10-17/rawImages/negShape.pkl'
             self.negShapeProfile = pickle.load(open(negF))
         self.beadsImg = BeadExpt(self.subDir,self.pathDir)
         self.dicFname = self.beadsImg._getImageName(c=1)
@@ -125,9 +124,10 @@ class BeadsImage:
         self.dicFname = self.beadsImg._getImageName(c=1)
         (dic_orig, dic_cimg) = self.beadsImg._openImages(self.dicFname)
         circles = self.beadsImg.findHoughCircles(dic_orig)
-        self.beadsImg.overLayHoughCircles_SVG(circles,dic_cimg)#SVG FILE MADE
-        overLayFname, overCimg = self.beadsImg.overLayHoughCircles(circles,dic_cimg,idx=1,putNbr= True)
-        self.beadsImg._saveImage(overLayFname+'.png', overCimg)
+        if not circles is None:
+            self.beadsImg.overLayHoughCircles_SVG(circles,dic_cimg)#SVG FILE MADE
+            overLayFname, overCimg = self.beadsImg.overLayHoughCircles(circles,dic_cimg,idx=1,putNbr= True)
+            self.beadsImg._saveImage(overLayFname+'.png', overCimg)
         return circles 
     
     def makeAllLinePlots(self,allCircles,minRad=50):
@@ -176,10 +176,13 @@ class ExperimentType:
             if self.exptType in subDir and not 'zS' in subDir:
                 expt = BeadsImage(subDir,self.pathDir,flChannel=self.flChannel)
                 allCircles = expt.makeHoughCircles()
-                totalBeads+=len(allCircles[0])
-                print "Number of Circles : %d"%len(allCircles[0])
-                allNormDev,stdevLineProfile = expt.makeAllLinePlots(allCircles,minRad=10)
-                allExptType_dict = appendDict(allExptType_dict,allNormDev)
+                if not allCircles is None:
+                    print allCircles
+                    totalBeads+=len(allCircles[0])
+                    print "Number of Circles : %d"%len(allCircles[0])
+                    allNormDev,stdevLineProfile = expt.makeAllLinePlots(allCircles,minRad=10)
+
+                    allExptType_dict = appendDict(allExptType_dict,allNormDev)
         meanExptProfile,stdevExptProfile = combineVal_dict(allExptType_dict)
         return meanExptProfile,stdevExptProfile,totalBeads
 
@@ -318,7 +321,7 @@ def negControl(pathDir,subDir):
         if typeDye in subDir and not 'zS' in subDir:
             negCntrl = BeadsImage(subDir,pathDir,isNeg=True)
             allCircles = negCntrl.makeHoughCircles()
-            negShapeProfile = negCntrl.makeAllLinePlots(allCircles,minRad=50)
+            negShapeProfile = negCntrl.makeAllLinePlots(allCircles,minRad=10)
             allNegTypeProfile_dict = appendDict(allNegTypeProfile_dict,negShapeProfile)
     meanNegProfile,stdevNegProfile = combineVal_dict(allNegTypeProfile_dict)
     fname = os.path.join(pathDir,'negShape.pkl')
@@ -388,20 +391,21 @@ def main(pathDir,dateStamp,exptDIr):
         
 
 if __name__ == '__main__':
-    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','12':'Dec'}
+    monthIs = {'01':'Jan','02':'Feb','03':'Mar','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
-    epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
+    epiDir = "/project/current/project/jagannath/projectfiles/EpiMicroscopy"
     rawDataDir = os.path.join(epiDir,"rawFiles")
-    sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
+    sourceDir ="/project/current/project/jagannath/projectfiles/EpiMicroscopy/rawFiles"
     month = monthIs[dateStamp.split('-')[1]]
-    exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
+    year = dateStamp.split('-')[0]
+    exptDir = os.path.join(sourceDir,year+'-'+month,dateStamp)
     pathDir = os.path.join(exptDir,"rawImages")
 
     t0 = time.clock()
     if ARG == 'RADIALPLOT':
-        sourceImageDir = os.path.join(exptDir,"LinePlotsAll")
-        if not os.path.exists(sourceImageDir): os.makedirs(sourceImageDir)
+        #sourceImageDir = os.path.join(exptDir,"LinePlotsAll")
+        #if not os.path.exists(sourceImageDir): os.makedirs(sourceImageDir)
         main(pathDir,dateStamp,exptDir)
     elif ARG == 'PLOT':
         drawFigures(pathDir)

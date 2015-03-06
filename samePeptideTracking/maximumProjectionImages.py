@@ -32,6 +32,7 @@ class MaximumProjection:
 
     def __init__(self,fList,startIDX= 0):
         self.fList = fList
+        self.f0 = fList[startIDX]
         self.startIDX = 0
         self.orig,self.grayimg,self.cimg = self._openImages(self.fList[startIDX])
 
@@ -74,9 +75,7 @@ class MaximumProjection:
             _img = ndimage.shift(_img,param)
             return self.MeasureErr(img,_img)
 
-
         param = optimize.fmin(_ErrFunc,param,maxiter=100)
-        
         return param,err.min()
 
     def calculateOffset(self,img,ximg):
@@ -110,6 +109,22 @@ class MaximumProjection:
             maxi[ix] = rimg[ix]
         return maxi,offsetDict
 
+    def applyOffset(self,offsetDict,exptFnames,ch=1):
+        f1Template = self.f0[:-5]+str(ch)+'.tif'
+        orig1,gray1,cimg1 = self._openImages(f1Template)
+        templateImg = orig1.copy()
+        maxi = orig1.copy()
+        for expt,(f1,f2) in exptFnames.items():
+            offset = offsetDict[f2]
+            (h,w) = offset#It returns x,y or w,h
+            print f1,f2, h,w            
+            img,gray,cimg = self._openImages(f1)
+            M = np.float32([[1,0,w],[0,1,h]])
+            rimg = cv2.warpAffine(img,M,templateImg.shape)
+            #Place where can be buggy; Offset is x,y; cv2 wants h,w
+            ix = rimg > maxi #Index where val[ar1]>val[ar2]
+            maxi[ix] = rimg[ix]
+        return maxi
 
 def traceFiles(pathDir):
     """
@@ -134,7 +149,7 @@ def traceFiles(pathDir):
             if not os.path.exists(destDir): os.makedirs(destDir)
             f = os.path.join(destDir,subDir+'.maxProjImage.tif')
             cv2.imwrite( f,maxImg)
-            pklFile = f + '.pkl'
+            pklFile = f + '.offsetDict.pkl'
             pickle.dump(offsetDict,open(pklFile,'w'))
             ofile.write(f+"\n")
     ofile.close()
@@ -155,35 +170,53 @@ def getFpaths(frame):
     subDir3 = '141213_DiAS1_PR011_2pM_Edman1_TFA1h_Both_A_flds008' 
 
     pathList = [(pathDir1,subDir1),(pathDir2,subDir2),(pathDir3,subDir3)]
+    exptPaths = {'mock1':(pathDir1,subDir1),
+                  'mock2':(pathDir2,subDir2),
+                  'edman':(pathDir3,subDir3)}
+    exptFnames_dict = dict()
 
-    for pathDir,subDir in pathList:
+    for expt,(pathDir,subDir) in exptPaths.items():
         # NOTE; PUT THIS IN THE ORDER YOU WANT
         fnamec1 = ''.join([subDir,frame,'c1','.tif'])
         fnamec2 = ''.join([subDir,frame,'c2','.tif'])
         fc1 = os.path.join(pathDir,fnamec1)
         fc2 = os.path.join(pathDir,fnamec2)
         allFpaths.append((fc1,fc2))
-    return allFpaths
+        exptFnames_dict[expt] = (fc1,fc2)
+    return allFpaths,exptFnames_dict
 
-def test_case():
+
+
+def makeMaxProjection():
     # Same channel for reference; Same frame
     #ch = 'c2' #REF; THIS BECOMES agnostic
+    
     frame = 'xy14'
     sameFld = 'A'
+    exptOrder = ('mock1','mock2','edman')
     
-    allFpaths = getFpaths(frame)
-    c2Fpaths = [f[1] for f in allFpaths]
+    allFpaths,exptFnames_dict = getFpaths(frame)
+    c2Fpaths = list()
+    for expt in exptOrder:
+        c2Fpaths.append(exptFnames_dict[expt][1])
     test = MaximumProjection(c2Fpaths)
-    maxImg,offsetDict = test.obtainMaxProjection(offset=True) 
-    destDir = '/project2/marcotte/boulgakov/microscope/2014-Dec/test/A/maxProjection'
-    if not os.path.exists(destDir): os.makedirs(destDir)
-    f = 'testCycle0_1_2.maxProjImage'
-    f = os.path.join(destDir,f+'.tif')
-    cv2.imwrite(f,maxImg)
-    ofile = open(f+'.listImages.txt','w')
-    ofile.write(f)
+    maxImg2,offsetDict = test.obtainMaxProjection(offset=True) 
+    maxImg1 = test.applyOffset(offsetDict,exptFnames_dict)
+
+    # Making image of the offsetdict
+    destDir = '/project2/marcotte/boulgakov/microscope/2014-Dec/test/A/maxProjection'   
+    f1 = 'testCycle0_1_2.c1.maxProjImage'
+    f2 = 'testCycle0_1_2.c2.maxProjImage'
+
+    f1 = os.path.join(destDir,f1+'.tif')
+    f2 = os.path.join(destDir,f2+'.tif')
+    cv2.imwrite(f1,maxImg1)
+    cv2.imwrite(f2,maxImg2)
+    
+    ofile = open(f2+'.listImages.txt','w')
+    ofile.write(f1+'\n'+f2)
     ofile.close()
-    pklFile = f+'.pkl'
+    pklFile = f2+'offsetDict.pkl'
     pickle.dump(offsetDict,open(pklFile,'w'))
 
 

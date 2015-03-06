@@ -30,7 +30,6 @@ my_ylocator = MaxNLocator(3)
 
 
 
-
 class RadialProfile:
     """
     This is the major class where the radial profile of the intensity is

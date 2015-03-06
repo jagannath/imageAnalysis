@@ -19,6 +19,7 @@ import shutil
 import sys
 from random import sample, choice
 from subprocess import call
+from commonFunctions import makeDir
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and below supplied root directory.'''
@@ -31,7 +32,7 @@ def locate(pattern, root=os.curdir):
 def removePngs(dateStamp):
     # To be used sparingly. If other pngs were generated, they disapper 
     pattern = '*.png'
-    allPngs = locate(pattern, sourceDir)
+    allPngs = locate(pattern, pathDir)
     for pngFile in allPngs:
         try:
             os.remove(pngFile)
@@ -42,7 +43,7 @@ def removePngs(dateStamp):
 def convertBatchImages(dateStamp):
     pattern = '*.tif'
     # convert -contrast-stretch 0.15x0.05% [input] [output]
-    allTiffs = locate(pattern, sourceDir)
+    allTiffs = locate(pattern, pathDir)
     for inputTif in allTiffs:
         outputTif1 = inputTif + '%d_scaled.png'
         outputTif2 = inputTif + '%d_noScale.png'
@@ -52,8 +53,8 @@ def convertBatchImages(dateStamp):
         call(cmd2.split(),shell=False)
 
 def convertSameFldImages(fldLetter):
-    pattern = '*'+fldLetter+'_fld*.tif'
-    allSameFldTiffs = locate(pattern, sourceDir)
+    pattern = '*'+fldLetter+'_*_fld*.tif'
+    allSameFldTiffs = locate(pattern, pathDir)
     destSameDir = os.path.join(destDir,'sameFlds',sameLetter)
     if not os.path.exists(destSameDir): os.makedirs(destSameDir)
     for inputTif in allSameFldTiffs:
@@ -89,8 +90,7 @@ def convertOneRandomImage(imgDir,destDir):
         call(cmd1.split(),shell=False)
         call(cmd2.split(),shell=False)
 
-    randomFile = choice(os.listdir(imgDir))
-    randomFile = choice(os.listdir(imgDir))
+    randomFile = choice([f for f in os.listdir(imgDir) if f.endswith('.tif')])
     if randomFile.endswith('c1.tif'): #Temp hack 
         f1 = randomFile
         f2 = randomFile[:-5]+'2.tif'
@@ -104,6 +104,7 @@ def convertOneRandomImage(imgDir,destDir):
     else:
         fpath = os.path.join(imgDir,randomFile)
         __makePNG(randomFile)
+    return True
 
 def rescaleStitchImage(imgDir,destDir):
     [f] = os.listdir(imgDir)
@@ -113,34 +114,46 @@ def rescaleStitchImage(imgDir,destDir):
     cmd = "convert " + fpath + " -resize " + scale + "% " + outputSTITCH
     call(cmd.split(),shell=False)
     print outputSTITCH 
+    return True
 
 
-dateStamp = "2014-12-13"
-#sameLetter = None
-dirConvert = []
-sameLetter = 'A'
-#dirConvert = ["/project2/marcotte/boulgakov/microscope/2014-Nov/2014-11-29/DiAS1_JSPR0112_200nM_deFmoc_TFA1h_561_flds013"]
-sourceDir = os.path.join("/project2/marcotte/boulgakov/microscope/2014-Dec",dateStamp)
-destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1/2014-Dec",dateStamp,"images")
-if not os.path.exists(destDir): os.makedirs(destDir)
-DIRNAMES = 1
+if __name__ == '__main__':
+    month = {'01':'Jan','02':'Feb','10':'Oct','11':'Nov','12':'Dec'}
+    [ARG, dateStamp] = sys.argv[1:]
+    sourceDir = "/project2/marcotte/boulgakov/microscope"
 
-if sameLetter: convertSameFldImages(sameLetter)
-#sys.exit(1)
-if dirConvert: 
-    for dirname in dirConvert: convertDir(dirname)
+    sameLetter = None
+    dirConvert = []
+    sameLetter = 'A'
+    #dirConvert = ["/project2/marcotte/boulgakov/microscope/2014-Dec/2014-12-11/141211_DiAS1_Blank_OvMeOH_Both_RF_flds005"]
 
-for dirname in os.walk(sourceDir).next()[DIRNAMES]:
-    print sourceDir
-    imgDir = os.path.join(sourceDir,dirname)
-    if 'flds' in imgDir:
-        convertOneRandomImage(imgDir,destDir)
-        print "flds"
-    if 'stitch' in imgDir:
-        rescaleStitchImage(imgDir,destDir)
+    yearStamp = dateStamp.split('-')[0]
+    monthStamp = yearStamp+"-"+month[dateStamp.split('-')[1]]
+    pathDir = os.path.join(sourceDir,monthStamp,dateStamp)
     
+    destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1",monthStamp,dateStamp,"images","randomImages")
+    makeDir(destDir)
+    t0 = time.clock()   
 
+    DIRNAMES = 1
+    
+    if sameLetter: convertSameFldImages(sameLetter)
 
-#sourceDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy/2014-June/"+ dateStamp + "/rawImages"
-#print sourceDir
-#convertBatchImages(sourceDir)
+    if dirConvert: 
+        #for dirname in dirConvert: convertDir(dirname)
+        dirname = dirConvert[0]
+        convertOneRandomImage(dirname,destDir)
+
+    for dirname in os.walk(pathDir).next()[DIRNAMES]:
+        print pathDir
+        imgDir = os.path.join(pathDir,dirname)
+        if 'flds' in imgDir and not 'tflds' in imgDir:
+            convertOneRandomImage(imgDir,destDir)
+            print "flds"
+        if 'stitch' in imgDir:
+            rescaleStitchImage(imgDir,destDir)
+
+    
+    t1 = time.clock()
+    print "Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0,
+                                                       time.strftime("%d %b %Y  %H:%M:%S",time.localtime()))

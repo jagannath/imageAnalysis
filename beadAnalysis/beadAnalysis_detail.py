@@ -367,6 +367,7 @@ if __name__ == '__main__':
     rawDataDir = os.path.join(epiDir,"rawFiles")
     sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
     month = monthIs[dateStamp.split('-')[1]]
+    year = dateStamp.split('-')[0]
     exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
     pathDir = os.path.join(exptDir,"rawImages")
 

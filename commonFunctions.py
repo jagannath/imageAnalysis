@@ -9,7 +9,7 @@ import fnmatch
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
-
+import cv2
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and
@@ -19,6 +19,22 @@ def locate(pattern, root=os.curdir):
         for filename in fnmatch.filter(files, pattern):
             allFiles.append(os.path.join(path,filename))
     return allFiles
+
+def simpleOpen(fname,flag=-1):
+    orig = cv2.imread(fname,flag)
+    corig = cv2.imread(fname,0)
+    cimg = cv2.cvtColor(corig,cv2.COLOR_GRAY2BGR)
+    return (orig, corig, cimg)
+
+def makeDir(dirname):
+    if not os.path.exists(dirname):os.makedirs(dirname)
+    return True
+
+def bounds(x):
+    if x < 0: x = 0
+    if x > 511: x = 511
+    return x
+
 
 def simpleShow(img):
     # Shows img when it is a matrix

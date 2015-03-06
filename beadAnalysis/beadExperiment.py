@@ -54,7 +54,7 @@ class BeadExpt(object):
         circles = (
         cv2.HoughCircles(blur,cv2.cv.CV_HOUGH_GRADIENT,dp=1,minDist=30,param1=90,param2=60,minRadius=25,maxRadius=75)
         )
-        if circles is None: circles = []
+        if circles is None: circles = None
         return circles
 
     def overLayHoughCircles(self,circles,cimg,idx=1,putNbr=False):
