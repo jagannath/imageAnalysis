@@ -11,14 +11,13 @@ better the image analysis and processing.
 from __future__ import division
 import numpy as np
 from matplotlib import pyplot as plt
-import tiffcapture as tc #This was a package I had to install 
 import scipy
 from PIL import Image
 import os
 import sys
 from subprocess import call
 import cv2
-sys.path.append('/project/marcotte/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
+sys.path.append('/project/current/project/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
 from commonFunctions import locate
 import re
 import cPickle as pickle
@@ -285,15 +284,15 @@ def test_case(subDir):
 
 
 if __name__ == '__main__':
-    monthIs = {'05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
+    monthIs = {'03':'Mar','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
 
-    epiDir = "/project/marcotte/jagannath/projectfiles/EpiMicroscopy"
+    epiDir = "/project/current/project/jagannath/projectfiles/EpiMicroscopy"
     rawDataDir = os.path.join(epiDir,"rawFiles")
-    sourceDir ="/project/marcotte/jagannath/projectfiles/EpiMicroscopy/rawFiles"
+    sourceDir ="/project/current/project/jagannath/projectfiles/EpiMicroscopy/rawFiles"
     month = monthIs[dateStamp.split('-')[1]]
-    exptDir = os.path.join(sourceDir,"2014-"+month,dateStamp)
+    exptDir = os.path.join(sourceDir,"2015-"+month,dateStamp)
     pathDir = os.path.join(exptDir,"rawImages")
     
     t0 = time.clock()

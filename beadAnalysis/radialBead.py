@@ -24,7 +24,7 @@ class Bead:
         self.x0, self.y0,self.r = map(int,circle)
         self.orig = orig
         self.cimg = cimg #Needed for drawing lines
-        self.approxRad = 30 
+        self.approxRad = 30  
         # This determines the granularity of the binning; Essential when dealing
         # with comparing beads of differing radius.
         self.lineExt = self.r * 1.2
@@ -130,7 +130,7 @@ class BeadsImage:
             self.beadsImg._saveImage(overLayFname+'.png', overCimg)
         return circles 
     
-    def makeAllLinePlots(self,allCircles,minRad=50):
+    def makeAllLinePlots(self,allCircles,minRad=30):
         (fl_orig,fl_cimg) = self.beadsImg._openImages(self.flFname,flag=-1)
         allNormDeviation_dict = collections.defaultdict(list) 
         for i,circle in enumerate(allCircles[0]):
@@ -177,10 +177,9 @@ class ExperimentType:
                 expt = BeadsImage(subDir,self.pathDir,flChannel=self.flChannel)
                 allCircles = expt.makeHoughCircles()
                 if not allCircles is None:
-                    print allCircles
                     totalBeads+=len(allCircles[0])
                     print "Number of Circles : %d"%len(allCircles[0])
-                    allNormDev,stdevLineProfile = expt.makeAllLinePlots(allCircles,minRad=10)
+                    allNormDev,stdevLineProfile = expt.makeAllLinePlots(allCircles,minRad=30)
 
                     allExptType_dict = appendDict(allExptType_dict,allNormDev)
         meanExptProfile,stdevExptProfile = combineVal_dict(allExptType_dict)
@@ -256,7 +255,7 @@ class RadialPlotFigure:
         yList = lineProfile.values()
         pf = RadialProfile(self.pathDir)
         ymaxLimit = 1.2*np.amax(yPlus)
-        ymaxredLimit = 40000
+        ymaxredLimit = 30000
         if 'reduced' in pklTag: ylim = ( 0,ymaxredLimit)
         else: ylim = (0, ymaxLimit)
         pf.drawProfileWstdev(xList,yList,yPlus,yMinus,fname,nbrCircles=nbrBeads,ylim=ylim)
@@ -306,7 +305,7 @@ def appendDict(adict,tmpDict):
 def test_case(subDir):
     imgStack = BeadsImage(subDir,pathDir)
     allCircles = imgStack.makeHoughCircles()
-    allNormDev = imgStack.makeAllLinePlots(allCircles,minRad=50)
+    allNormDev = imgStack.makeAllLinePlots(allCircles,minRad=30)
     profile = RadialProfile(pathDir)
     fname = os.path.join(pathDir,subDir,'test')
     profile.drawProfile(allNormDev,fname,nbrCircles = len(allCircles[0]))
@@ -321,7 +320,7 @@ def negControl(pathDir,subDir):
         if typeDye in subDir and not 'zS' in subDir:
             negCntrl = BeadsImage(subDir,pathDir,isNeg=True)
             allCircles = negCntrl.makeHoughCircles()
-            negShapeProfile = negCntrl.makeAllLinePlots(allCircles,minRad=10)
+            negShapeProfile = negCntrl.makeAllLinePlots(allCircles,minRad=30)
             allNegTypeProfile_dict = appendDict(allNegTypeProfile_dict,negShapeProfile)
     meanNegProfile,stdevNegProfile = combineVal_dict(allNegTypeProfile_dict)
     fname = os.path.join(pathDir,'negShape.pkl')
@@ -364,6 +363,7 @@ def combineExptPlots(pathDir,pklDir,radPlotDir):
     
 def main(pathDir,dateStamp,exptDIr):
     # Makes PKL file : exptType.meanLineProfile.dict.pkl: [nbrBeads,dict]
+    channel_dict = {'405': 2, '488': 3,'555': 4,'647': 5}
     ofname = os.path.join(exptDir,dateStamp+'_RADIALSUMMARY.csv')
     ofile = open(ofname,'w')
     header = '\t'.join(['pickleFname','Experimental Step','MEAN AUC','STDEV AUC','\n'])
@@ -375,10 +375,13 @@ def main(pathDir,dateStamp,exptDIr):
                  os.path.isfile(os.path.join(pathDir,f))]
     allExptTypes = set(['_'.join(f.split('_')[:-1])  for f in allFnames])
     for exptType in allExptTypes:
+            
+        #channel_int = channel_dict[exptType.split('_')[-2]]
+        channel_int = 5 
         print "Expt type: %s"%(exptType)
-        exptStep = ExperimentType(pathDir,exptType,flChannel=4)
+        exptStep = ExperimentType(pathDir,exptType,flChannel=channel_int)
         meanExptProfile,stdevExptProfile,totalBeads = exptStep.combineProfiles()
-
+        
         exptDetails = [totalBeads,meanExptProfile,stdevExptProfile]
         exptStep.pickleIt(exptDetails,'.meanLineProfile.dict.pkl')
         
@@ -388,15 +391,16 @@ def main(pathDir,dateStamp,exptDIr):
         
         info = [pklPath,exptType,str(area),str(areaStdev),'\n']
         ofile.write('\t'.join(info))
-        
+    return True        
 
 if __name__ == '__main__':
-    monthIs = {'01':'Jan','02':'Feb','03':'Mar','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
+    monthIs = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
     epiDir = "/project/current/project/jagannath/projectfiles/EpiMicroscopy"
     rawDataDir = os.path.join(epiDir,"rawFiles")
     sourceDir ="/project/current/project/jagannath/projectfiles/EpiMicroscopy/rawFiles"
+    #sourceDir = "/project/current/project/jagannath/projectfiles/EpiMicroscopy/amber"
     month = monthIs[dateStamp.split('-')[1]]
     year = dateStamp.split('-')[0]
     exptDir = os.path.join(sourceDir,year+'-'+month,dateStamp)

@@ -52,10 +52,10 @@ def convertBatchImages(dateStamp):
         call(cmd1.split(),shell=False)
         call(cmd2.split(),shell=False)
 
-def convertSameFldImages(fldLetter):
-    pattern = '*'+fldLetter+'_*_fld*.tif'
+def convertSameFldImages(pattern):
+    
     allSameFldTiffs = locate(pattern, pathDir)
-    destSameDir = os.path.join(destDir,'sameFlds',sameLetter)
+    destSameDir = os.path.join(destDir,'pattern',p)
     if not os.path.exists(destSameDir): os.makedirs(destSameDir)
     for inputTif in allSameFldTiffs:
         dirname = os.path.split(os.path.split(inputTif)[0])[1]
@@ -91,16 +91,27 @@ def convertOneRandomImage(imgDir,destDir):
         call(cmd2.split(),shell=False)
 
     randomFile = choice([f for f in os.listdir(imgDir) if f.endswith('.tif')])
-    if randomFile.endswith('c1.tif'): #Temp hack 
+    if randomFile.endswith('c1.tif'): #Temp hack
         f1 = randomFile
         f2 = randomFile[:-5]+'2.tif'
-        __makePNG(f1)
-        __makePNG(f2)
+        f3 = randomFile[:-5]+'3.tif'
+        if os.path.isfile(os.path.join(imgDir,f1)): __makePNG(f1)
+        if os.path.isfile(os.path.join(imgDir,f2)): __makePNG(f2)
+        if os.path.isfile(os.path.join(imgDir,f3)): __makePNG(f3)
     elif randomFile.endswith('c2.tif'):
         f1 = randomFile[:-5]+'1.tif'
         f2 = randomFile
-        __makePNG(f1)
-        __makePNG(f2)
+        f3 = randomFile[:-5]+'3.tif'
+        if os.path.isfile(os.path.join(imgDir,f1)): __makePNG(f1)
+        if os.path.isfile(os.path.join(imgDir,f2)): __makePNG(f2)
+        if os.path.isfile(os.path.join(imgDir,f3)): __makePNG(f3)
+    elif randomFile.endswith('c3.tif'):            
+        f1 = randomFile[:-5]+'1.tif'
+        f2 = randomFile[:-5]+'2.tif'
+        f3 = randomFile
+        if os.path.isfile(os.path.join(imgDir,f1)): __makePNG(f1)
+        if os.path.isfile(os.path.join(imgDir,f2)): __makePNG(f2)
+        if os.path.isfile(os.path.join(imgDir,f3)): __makePNG(f3)
     else:
         fpath = os.path.join(imgDir,randomFile)
         __makePNG(randomFile)
@@ -118,41 +129,66 @@ def rescaleStitchImage(imgDir,destDir):
 
 
 if __name__ == '__main__':
-    month = {'01':'Jan','02':'Feb','10':'Oct','11':'Nov','12':'Dec'}
+    month = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','06':'June','07':'July','10':'Oct','11':'Nov','12':'Dec'}
     [ARG, dateStamp] = sys.argv[1:]
-    sourceDir = "/project2/marcotte/boulgakov/microscope"
+    yearStamp = dateStamp.split('-')[0]
+    monthStamp = yearStamp+"-"+month[dateStamp.split('-')[1]]
+
+
+    microscope = 1 
+    if microscope is 1:
+        sourceDir = "/project/boulgakov/microscope"
+        pathDir = os.path.join(sourceDir,monthStamp,dateStamp)
+    
+        destDir = os.path.join("/project/current/project2/jaggu/dataAnalysis/microscope1",monthStamp,dateStamp,"images","randomImages")
+    elif microscope is 2:
+        sourceDir = "/project/boulgakov/microscope2/jagannath/rawFiles"
+        pathDir = os.path.join(sourceDir,monthStamp,dateStamp)
+        destDir = os.path.join("/project/current/project2/jaggu/dataAnalysis/microscope2",monthStamp,dateStamp,"images","randomImages")
+
+    elif microscope is 3:                                                                                                                 
+        sourceDir = "/project/boulgakov/microscope3/rawFiles/jagannath"                                                                    
+        pathDir = os.path.join(sourceDir,monthStamp,dateStamp)                                                                             
+        destDir = os.path.join("/project/current/project2/jaggu/dataAnalysis/microscope3",monthStamp,dateStamp,"images","randomImages")    
+    
+    else:
+        raise SystemExit("Incorrect microscope number. Quiting ..")
+
+    makeDir(destDir)
 
     sameLetter = None
     dirConvert = []
-    sameLetter = 'A'
+    #sameLetter = 'A'
     #dirConvert = ["/project2/marcotte/boulgakov/microscope/2014-Dec/2014-12-11/141211_DiAS1_Blank_OvMeOH_Both_RF_flds005"]
 
-    yearStamp = dateStamp.split('-')[0]
-    monthStamp = yearStamp+"-"+month[dateStamp.split('-')[1]]
-    pathDir = os.path.join(sourceDir,monthStamp,dateStamp)
-    
-    destDir = os.path.join("/project2/marcotte/jaggu/dataAnalysis/microscope1",monthStamp,dateStamp,"images","randomImages")
-    makeDir(destDir)
     t0 = time.clock()   
 
     DIRNAMES = 1
-    
-    if sameLetter: convertSameFldImages(sameLetter)
-
+#    sameLetter = 'A'
+#    if sameLetter:
+        #pattern = '*'+fldLetter+'_*_fld*.tif'
+#        pattern = '*'+'Cycles'+'*fld*.tif'
+            
+#        convertSameFldImages(pattern)
     if dirConvert: 
         #for dirname in dirConvert: convertDir(dirname)
         dirname = dirConvert[0]
         convertOneRandomImage(dirname,destDir)
-
-    for dirname in os.walk(pathDir).next()[DIRNAMES]:
-        print pathDir
-        imgDir = os.path.join(pathDir,dirname)
-        if 'flds' in imgDir and not 'tflds' in imgDir:
-            convertOneRandomImage(imgDir,destDir)
-            print "flds"
-        if 'stitch' in imgDir:
-            rescaleStitchImage(imgDir,destDir)
-
+    if ARG == 'FLDS':
+        for dirname in os.walk(pathDir).next()[DIRNAMES]:
+            print pathDir
+            imgDir = os.path.join(pathDir,dirname)
+            if 'fld' in imgDir and not 'tflds' in imgDir:
+                convertOneRandomImage(imgDir,destDir)
+            if 'stitch' in imgDir:
+                rescaleStitchImage(imgDir,destDir)
+    elif ARG == 'PATTERN':
+        p = 'Cycles'
+        pattern = '*'+p+'*.tif'
+        convertSameFldImages(pattern)
+    else:
+        raise SystemExit("Incorrect Argument ...")
+    
     
     t1 = time.clock()
     print "Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0,

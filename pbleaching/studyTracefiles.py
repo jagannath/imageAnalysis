@@ -15,10 +15,9 @@ from  matplotlib import pyplot as plt
 from matplotlib import gridspec as gridspec
 from matplotlib.patches import Rectangle
 
-sys.path.append('/project/marcotte/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
+sys.path.append('/project/current/project/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis')
 from commonFunctions import locate,simpleShow,simpleOpen,bounds,makeDir
 import my_math 
-
 
 
 # MATPLOTLIB DEFAULT PARAMS
