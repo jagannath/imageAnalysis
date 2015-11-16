@@ -17,12 +17,12 @@ for f in sorted(fnames):
     ch = f[-5]
     [nbr] = re.findall("xy\d+",f)
     fnbr = int(nbr.split('xy')[1])
+     
     inputTif = os.path.join(sourceImgDir,f)
     if fnbr<=4001:
         
-        outputTif1 = os.path.join(destDir,'ch'+str(ch),'ch'+str(ch)+'_tile_'+str(fnbr)+'.tif')
-        outputTif2 = os.path.join(destDir2,'ch'+str(ch),'scaled_ch'+str(ch)+'_tile_'+str(fnbr)+'.tif')
-
+        outputTif1 = os.path.join(destDir,'ch'+str(ch),'ch'+str(ch)+'_tile_'+str(nbr)+'.tif')
+        outputTif2 = os.path.join(destDir2,'ch'+str(ch),'scaled_ch'+str(ch)+'_tile_'+str(nbr)+'.tif')
         print "Renaming and shrinking to ..",outputTif1
         cmd1 = "convert " + inputTif + " " + outputTif1
         cmd2 = "convert -scale 25% " + inputTif + " " + outputTif2

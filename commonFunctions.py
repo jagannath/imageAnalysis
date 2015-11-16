@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 import cv2
+import cPickle as pickle
 
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and
@@ -34,7 +35,6 @@ def bounds(x):
     if x < 0: x = 0
     if x > 511: x = 511
     return x
-
 
 def simpleShow(img):
     # Shows img when it is a matrix
@@ -187,7 +187,6 @@ def colorImage(img,color='Reds',stretch='linear'):
         img_map = 1/(1 + np.exp(-1*(img-beta)/alpha))
     else: img_map = img/img.max()
 
-
     # Need to normalize the img; 0-1 for the cmap to work
     cmap = plt.get_cmap(colormap)
     rgba_img = cmap(img_map,bytes=True)
@@ -247,7 +246,24 @@ def makeCmap():
     plt.colorbar()
     plt.show()
 
+def savePkl(db,f,currDir=None):
+	if currDir is None: pklPath = os.path.join(os.getcwd(),'pklFiles')
+	else: pklPath = os.path.join(currDir,'pklFiles')
+	if not os.path.exists(pklPath): os.makedirs(pklPath)
+	fpath = os.path.join(pklPath,f)
+	ofile = open(fpath,'w')
+	pickle.dump(db,ofile)
+	ofile.close()
+	return True
 
+def loadPkl(f,currDir=None):
+	if currDir is None: pklPath = os.path.join(os.getcwd(),'pklFiles')
+	else: pklPath = os.path.join(currDir,'pklFiles')
+	fpath = os.path.join(pklPath,f)
+	ifile = open(fpath,'r')
+	db = pickle.load(ifile)
+	ifile.close()
+	return db
 
 
 

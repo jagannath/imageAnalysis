@@ -62,7 +62,18 @@ def two_exponential(ydata,norm=False):
 
     return param_opt,rmse,r_2,y_fit
 
+def model_func(t, A, K, C):
+    return A * np.exp(K * t) + C
 
+def fit_exp_linear(t, y, C=0):
+    y = np.array(y,dtype=float)
+    t = np.array(t,dtype=int)
+    y = y - C
+    y = np.log(y)
+    K, A_log = np.polyfit(t, y, 1)
+    A = np.exp(A_log)
+    y_fit = model_func(t,A,K,C)
+    return A, K, y_fit
 
 
 

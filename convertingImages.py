@@ -21,6 +21,11 @@ from random import sample, choice
 from subprocess import call
 from commonFunctions import makeDir
 
+
+def testImport():
+    return True
+
+
 def locate(pattern, root=os.curdir):
     '''Locate all files matching supplied filename pattern in and below supplied root directory.'''
     allFiles = []
@@ -52,8 +57,7 @@ def convertBatchImages(dateStamp):
         call(cmd1.split(),shell=False)
         call(cmd2.split(),shell=False)
 
-def convertSameFldImages(pattern):
-    
+def convertSameFldImages(pattern,pathDir,destDir):
     allSameFldTiffs = locate(pattern, pathDir)
     destSameDir = os.path.join(destDir,'pattern',p)
     if not os.path.exists(destSameDir): os.makedirs(destSameDir)
@@ -66,7 +70,20 @@ def convertSameFldImages(pattern):
         cmd = "convert -contrast-stretch 0.015x0.05% " + inputTif + " " + outputPNG
         call(cmd.split(),shell=False)
         print outputPNG
-        
+
+def convertPatternImages(pattern, pathDir, destDir,dirname='frames'):
+    allfiles = locate(pattern,pathDir)
+    destPatternDir = os.path.join(destDir,dirname,pattern)
+    if not os.path.exists(destPatternDir):os.makedirs(destPatternDir)
+    for inputTif in allfiles:
+        destfname = os.path.split(inputTif)[1] + '_scaled.png'
+	outputPNG = os.path.join(destPatternDir,destfname)
+	cmd = "convert -contrast-stretch 0.015x0.05% " + inputTif + " " + outputPNG
+	call(cmd.split(),shell=False)
+	print outputPNG
+    return True
+
+
 def convertDir(newSourceDir): 
     dname = os.path.split(newSourceDir)[1]
     allInputTiffs = locate('*.tif',newSourceDir)
@@ -127,6 +144,10 @@ def rescaleStitchImage(imgDir,destDir):
     print outputSTITCH 
     return True
 
+
+
+
+"""
 
 if __name__ == '__main__':
     month = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','06':'June','07':'July','10':'Oct','11':'Nov','12':'Dec'}
@@ -193,3 +214,4 @@ if __name__ == '__main__':
     t1 = time.clock()
     print "Script - %s \t Completed in %s secs \t %s"%(sys.argv, t1-t0,
                                                        time.strftime("%d %b %Y  %H:%M:%S",time.localtime()))
+"""
