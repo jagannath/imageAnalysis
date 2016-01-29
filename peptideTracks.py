@@ -47,9 +47,6 @@ def makeIntensityCategory(trackFile,ch=1):
     return category_trackDetails_dict    
 
 
-
-
-
 def getIntensityList_category(db,desired_categoryList):
     """
     getIntensityList_category: The dictionary containing all the category is parsed to output only the desired categories. 
@@ -70,9 +67,9 @@ def getIntensityList_category(db,desired_categoryList):
         categories_intensity_list.append([category,len(intensityList),allMeanIntensity])
     return categories_intensity_list
 
-def getDesiredCategory(category_type='staggered'):
+def getDesiredCategory(category_type='staggered',nbrFrames=7):
     if category_type is 'staggered': 
-	    desired_category = [[True]*(i+1) + [False]*(7-i) for i in range(8)]
+	    desired_category = [[True]*(i+1) + [False]*(nbrFrames-i) for i in range(nbrFrames+1)]
     return desired_category
 
 def writeCountsFile(desired_category_details_chList,destDir):
@@ -108,7 +105,7 @@ def calculateEdmanEfficiency(countList,edmanframe,calcType='aboveDecay'):
 
     (b) aboveDecay: The counts are modeled as an exponential decay curve. The edman frame and the next frame skipped in the modeling. 
     The number of loss at that step is the proxy if Edman did not happen. So the efficiency is -
-    total peptides = counts[edman frame] + counts[edman frame + 1]
+    total peptides = absolute value of difference between the true counts - expected counts
     expected loss1 = expFit(edman frame); expected loss2 = expFit(edman frame + 1)
     efficiency  1 = (lossCounts[edman frame] - expected loss1)/total peptides
     efficicency 2 = (lossCounts[edman frame + 1]  - expected loss2)/total peptides
@@ -139,13 +136,21 @@ def calculateEdmanEfficiency(countList,edmanframe,calcType='aboveDecay'):
 	    y, t = zip(*ydata)
 	    A,K,C,y_fit = fit_exp_linear(t,y)
 	    y_edmanframe = countList[edmanframe]
+	    restFrames = range(edmanframe,len(countList))
+	    totalPeptides_edmanframe = sum([abs(countList[i]-model_func(i,A,K,C)) for i in restFrames])
+	    eff1 = y_edmanframe/totalPeptides_edmanframe
 	    y_nextEdmanframe = countList[edmanframe+1]
-	    totalPeptides = sum([abs(countList[i]-model_func(i,A,K,C)) for i in range(len(countList))])
-	    eff1 = y_edmanframe/totalPeptides
-	    eff2 = y_nextEdmanframe/totalPeptides
-    return (eff1,eff2)
+	    restFrames = range(edmanframe+1,len(countList))
+	    totalPeptides_nextEdmanframe = sum([abs(countList[i] - model_func(i,A,K,C)) for i in restFrames])
+	    eff2 = y_nextEdmanframe/totalPeptides_nextEdmanframe
+	    #totalPeptides = sum([abs(countList[i]-model_func(i,A,K,C)) for i in range(len(countList))])
+	    #eff1 = y_edmanframe/totalPeptides
+	    #print eff1, eff2
+	    #sys.exit(1)
+	    #eff2 = y_nextEdmanframe/totalPeptides
+    return (eff1,eff2,totalPeptides_edmanframe)
 
-def writeEdmanEfficiency(fname,eff1,eff2,edmanframe,chName,calcType='aboveDecay'):
+def writeEdmanEfficiency(fname,eff1,eff2,totalPeptides, edmanframe,chName,calcType='aboveDecay'):
     """
     Writes the Edman efficiency on the output file of the counts; It takes the output file as an appendable form
     return : file name
@@ -156,10 +161,35 @@ def writeEdmanEfficiency(fname,eff1,eff2,edmanframe,chName,calcType='aboveDecay'
     ofile.write("Calculation Type : "+ calcType + "\n")
     ofile.write("Channel " + chName + "\n")
     ofile.write("Edman frame  : " + "\t" + str(edmanframe) + "\n")
+    ofile.write("Total peptides : "+ "\t" + str(totalPeptides) + "\n")
     ofile.write("Efficiency 1 : " + "\t" + str(eff1) + "\n")
     ofile.write("Efficiency 2 : " + "\t" + str(eff2) + "\n")
     ofile.close()
     return fname
+
+def calculateSequencingEfficiency(countList,edmanframe,calcType='conservative'):
+    # This is the similar as the conservative estimate of edman efficiency; I calculate the cleaved peptide (edman frame and next frame) / total peptides
+    if calcType is 'conservative':
+	    cleaved = countList[edmanframe] + countList[edmanframe+1]
+	    totalPeptides = sum(countList[1:])
+	    eff = cleaved/totalPeptides
+	
+    return (eff, cleaved, totalPeptides)
+
+def writeSequencingEfficiency(fname,eff,cleaved,totalPeptides,chName,calcType='conservative'):
+    """
+    Writes the Sequencing efficiency on the output file of the counts; 
+    """
+    ofile = open(fname,'a')
+    ofile.write("\n \n \n")
+    ofile.write("Sequencing efficiency \n ")
+    ofile.write("Calculation Type : "+calcType + "\n")
+    ofile.write("Channel " + chName + "\n")
+    ofile.write("Peptides cleaved " + str(cleaved) + "\n")
+    ofile.write("Total peptides " + str(totalPeptides) + "\n" )
+    ofile.write("Efficiency " + str(eff) + "\n" )
+    ofile.close()
+    return fname 
 
 def testImport():
 	return True

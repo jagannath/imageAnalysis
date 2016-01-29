@@ -18,7 +18,6 @@ import re
 import argparse
 import socket
 
-
 hostname = socket.gethostname()
 if hostname == 'canopus': headDir = "/home/jaggu/marcotte_project"
 else: headDir = "/project"
@@ -116,7 +115,7 @@ class PeptideTracks:
         print "Pickled : ",pklF
         return pklF  
     
-    def countTracks(self,pickle_exists=False):
+    def countTracks(self,pickle_exists=False,nbrframes=7):
         trackFileList = [f for f in os.walk(self.outputDirpath).next()[2] if f.startswith('track_photometries')]
         assert len(trackFileList)==1
         [trackPhotometryFile] = trackFileList
@@ -132,10 +131,10 @@ class PeptideTracks:
             self.pickle_categoryDict(category_dict_ch2,2)
             print "Categories Dictionaries pickled"
     
-        desired_category = peptracks.getDesiredCategory('staggered')
+        desired_category = peptracks.getDesiredCategory('staggered',nbrframes)
         self.desired_categoryList_ch1 = peptracks.getIntensityList_category(category_dict_ch1,desired_category)
         self.desired_categoryList_ch2 = peptracks.getIntensityList_category(category_dict_ch2,desired_category)
-
+        
         ofname = peptracks.writeCountsFile([self.desired_categoryList_ch1,self.desired_categoryList_ch2],self.peptracks_destDir)
         print "Peptide track counts and intensity file created ",ofname
         return self.desired_categoryList_ch1, self.desired_categoryList_ch2,ofname
@@ -143,11 +142,21 @@ class PeptideTracks:
     def edmanEfficiency(self,ofname,edmanframe_ch1=3,edmanframe_ch2=4,calcType='aboveDecay'):
         counts_ch1 = [item[1] for item in self.desired_categoryList_ch1]
         counts_ch2 = [item[1] for item in self.desired_categoryList_ch2]
-        eff1_ch1, eff2_ch1 = peptracks.calculateEdmanEfficiency(counts_ch1,edmanframe_ch1,calcType)
-        eff1_ch2, eff2_ch2 = peptracks.calculateEdmanEfficiency(counts_ch2,edmanframe_ch2,calcType)
-        ofname = peptracks.writeEdmanEfficiency(ofname,eff1_ch1,eff2_ch1,edmanframe_ch1,'ch1',calcType)
-        ofname = peptracks.writeEdmanEfficiency(ofname,eff1_ch2,eff2_ch2,edmanframe_ch2,'ch1',calcType)
+        eff1_ch1, eff2_ch1,totalPeptides_ch1 = peptracks.calculateEdmanEfficiency(counts_ch1,edmanframe_ch1,calcType)
+        eff1_ch2, eff2_ch2,totalPeptides_ch2 = peptracks.calculateEdmanEfficiency(counts_ch2,edmanframe_ch2,calcType)
+        ofname = peptracks.writeEdmanEfficiency(ofname,eff1_ch1,eff2_ch1,totalPeptides_ch1,edmanframe_ch1,'ch1',calcType)
+        ofname = peptracks.writeEdmanEfficiency(ofname,eff1_ch2,eff2_ch2,totalPeptides_ch2,edmanframe_ch2,'ch2',calcType)
         return ofname
+
+    def sequencingEfficiency(self,ofname,edmanframe_ch1=3,edmanframe_ch2=4,calcType='conservative'):
+        counts_ch1 = [item[1] for item in self.desired_categoryList_ch1]
+        counts_ch2 = [item[1] for item in self.desired_categoryList_ch2]
+        eff_ch1, cleaved_ch1,totalPeptides_ch1 = peptracks.calculateSequencingEfficiency(counts_ch1,edmanframe_ch1,calcType)
+        eff_ch2, cleaved_ch2,totalPeptides_ch2 = peptracks.calculateSequencingEfficiency(counts_ch2,edmanframe_ch2,calcType)
+        ofname = peptracks.writeSequencingEfficiency(ofname,eff_ch1,cleaved_ch1,totalPeptides_ch1,'ch1',calcType)
+        ofname = peptracks.writeSequencingEfficiency(ofname,eff_ch2,cleaved_ch2,totalPeptides_ch2,'ch2',calcType)
+        return ofname
+
 
 class CountDensity:
     """
@@ -183,12 +192,13 @@ def test_density():
 ## TEST
 
 
-def runTrackExperiment(pathDir,destDir,edmanframes):
+def runTrackExperiment(pathDir,destDir,edmanframes,nbrframes=7):
     if len(edmanframes)==2:
         edmanframe_ch1,edmanframe_ch2 = map(int,edmanframes)
     p = PeptideTracks(pathDir,destDir)
-    db_ch1,db_ch2,ofname = p.countTracks(pickle_exists=False)
+    db_ch1,db_ch2,ofname = p.countTracks(pickle_exists=False,nbrframes=nbrframes)
     p.edmanEfficiency(ofname,edmanframe_ch1,edmanframe_ch2)
+    p.sequencingEfficiency(ofname,edmanframe_ch1,edmanframe_ch2)
 
 def runImageExperiment(pathDir,destDir,imgType,imgframes,imgpattern):
     i = ConvertImages(pathDir,destDir)
@@ -207,17 +217,17 @@ def runPeakDensityExperiment(pathDir,destDir,dateStamp,peakdensity_type):
 
 
 def runExperimentType(dateStamp,microscopeNbr,ARGLIST=[]):
-    edmanframes,imgTypeList,peakdensity= ARGLIST
+    edmanframes,nbrframes,imgTypeList,peakdensity_type= ARGLIST
     sourceDir,pathDir,destDir = getDirectory(hostname,dateStamp,microscopeNbr)   
     if edmanframes:
-        runTrackExperiment(pathDir,destDir,edmanframes)
+        runTrackExperiment(pathDir,destDir,edmanframes,nbrframes)
     if imgTypeList[0]: #None is the default
         imgType,imgframes,imgpattern = imgTypeList
         print "Processing Images :%s", imgType,imgframes,imgpattern
         runImageExperiment(pathDir,destDir,imgType,imgframes,imgpattern)
-    if peakdensity:
-        print "Processing peak density : ",peakdensity
-        runImageExperiment(pathDir,destDir,dateStamp,peakdensity) 
+    if peakdensity_type:
+        print "Processing peak density : ",peakdensity_type
+        runPeakDensityExperiment(pathDir,destDir,dateStamp,peakdensity_type) 
 
 def test():
     test_tracks()
@@ -238,11 +248,12 @@ parser = argparse.ArgumentParser(description="""This is the script meant to summ
 
 parser.add_argument('--date', action="store", dest='dateStamp')
 parser.add_argument('--scope', action="store", dest='microscopeNbr',default=1,type=int)
-parser.add_argument('--edmanframes',action="store", dest='edmanframes',nargs='+',default=[],help="Edman frames for Channel-1 and/or Channel-2")
-parser.add_argument('--images',action="store", dest='imgType',default=None,help="Converts the images into random,all or just frame")
+parser.add_argument('--edmanframes',action="store", dest='edmanframes',nargs='+',default=[],help="Edman frames for Channel-1 and/or Channel-2. eg --edmanframes 3 4")
+parser.add_argument('--nbrframes',action="store", dest='nbrframes',default=7,type=int,help="Edman frames for Channel-1 and/or Channel-2. eg --edmanframes 3 4")
+parser.add_argument('--images',action="store", dest='imgType',default=None,help="Converts the images into [random,all,frames]")
 parser.add_argument('--peakdensity',action="store",dest='peakdensity',nargs=1,default=None,help="Adds the option of [counts or intensity] for each field in the experiment")
-parser.add_argument('--image_frames',action="store",dest='imgframes',nargs='+',default=[5],help="Images whose Frames are converted to pngs")
+parser.add_argument('--image_frames',action="store",dest='imgframes',nargs='+',default=[5],help="Images whose Frames are converted to pngs: eg [10,20]")
 parser.add_argument('--image_pattern',action="store",dest='imgpattern',default='*Cycle*',help="Converts images of the given pattern")
 args = parser.parse_args()
-ARGLIST = [args.edmanframes,[args.imgType,args.imgframes,args.imgpattern],args.peakdensity]
+ARGLIST = [args.edmanframes,args.nbrframes,[args.imgType,args.imgframes,args.imgpattern],args.peakdensity]
 runExperimentType(args.dateStamp,args.microscopeNbr,ARGLIST)

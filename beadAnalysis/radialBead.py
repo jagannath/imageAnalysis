@@ -10,8 +10,19 @@ from commonFunctions import locate,simpleShow
 import cPickle as pickle
 import collections
 import time
+from subprocess import call
+import fnmatch
 from beadExperiment import BeadExpt
 from radialProfileFigure import RadialProfile
+
+def locate(pattern, root=os.curdir):
+    '''Locate all files matching supplied filename pattern in and
+    below supplied root directory.'''
+    allFiles = []
+    for path, dirs, files in os.walk(os.path.abspath(root)):
+        for filename in fnmatch.filter(files, pattern):
+            allFiles.append(os.path.join(path,filename))
+    return allFiles
 
 class Bead:
     """
@@ -336,6 +347,7 @@ def drawFigures(pathDir):
     pklFiles = locate('*.pkl',pklDir)
     #combineExptPlots(pathDir,pklDir,radPlotDir)
     for pklF in pklFiles:
+        print pklF
         exptType = os.path.split(pklF)[1].split('.')[0]
         
         plotType1 = RadialPlotFigure(pathDir,exptType)
@@ -373,11 +385,12 @@ def main(pathDir,dateStamp,exptDIr):
     if not os.path.exists(pklDir): os.makedirs(pklDir)
     allFnames = [f for f in os.listdir(pathDir) if
                  os.path.isfile(os.path.join(pathDir,f))]
+
     allExptTypes = set(['_'.join(f.split('_')[:-1])  for f in allFnames])
     for exptType in allExptTypes:
             
         #channel_int = channel_dict[exptType.split('_')[-2]]
-        channel_int = 5 
+        channel_int = 2 
         print "Expt type: %s"%(exptType)
         exptStep = ExperimentType(pathDir,exptType,flChannel=channel_int)
         meanExptProfile,stdevExptProfile,totalBeads = exptStep.combineProfiles()
@@ -392,6 +405,19 @@ def main(pathDir,dateStamp,exptDIr):
         info = [pklPath,exptType,str(area),str(areaStdev),'\n']
         ofile.write('\t'.join(info))
     return True        
+
+def convertTifs(pathDir):
+    allTifs = locate("*c*.tif",pathDir)
+    for f1 in allTifs:
+        f2 = f1[:-4]+'.jpg'
+        cmd = "convert " + f1 + " " + f2
+        call(cmd.split(),shell=False)
+
+    return True
+
+
+
+
 
 if __name__ == '__main__':
     monthIs = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
@@ -413,6 +439,8 @@ if __name__ == '__main__':
         main(pathDir,dateStamp,exptDir)
     elif ARG == 'PLOT':
         drawFigures(pathDir)
+    elif ARG == 'CONVERT':
+        convertTifs(pathDir)
     elif ARG == 'NEGCONTROL':
         print "Processing a Negative Control ..."
         pathDir = os.path.join(sourceDir,"2014-Oct","2014-10-17","rawImages")
