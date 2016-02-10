@@ -134,7 +134,6 @@ class PeptideTracks:
         desired_category = peptracks.getDesiredCategory('staggered',nbrframes)
         self.desired_categoryList_ch1 = peptracks.getIntensityList_category(category_dict_ch1,desired_category)
         self.desired_categoryList_ch2 = peptracks.getIntensityList_category(category_dict_ch2,desired_category)
-        
         ofname = peptracks.writeCountsFile([self.desired_categoryList_ch1,self.desired_categoryList_ch2],self.peptracks_destDir)
         print "Peptide track counts and intensity file created ",ofname
         return self.desired_categoryList_ch1, self.desired_categoryList_ch2,ofname

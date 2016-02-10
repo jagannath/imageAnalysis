@@ -42,8 +42,9 @@ def makeIntensityCategory(trackFile,ch=1):
         channel = line.split(',')[0]
         if channel == query_channel:
             category_tup = eval(catStr)
-            intensityList = map(float,line.strip().split(',')[-8:])
-            category_trackDetails_dict[category_tup].append(intensityList) 
+	    intensity_split = re.findall('\)",[-|\d]\d*.*',line.strip())[0]
+	    intensityList = map(float,intensity_split.split(',')[1:])
+	    category_trackDetails_dict[category_tup].append(intensityList) 
     return category_trackDetails_dict    
 
 
@@ -59,7 +60,7 @@ def getIntensityList_category(db,desired_categoryList):
     for idx, category in enumerate(desired_categoryList):
         category = tuple(category)
         intensityList = db[category]
-        allMeanIntensity = list()
+	allMeanIntensity = list()
         for l in intensityList:
             allMeanIntensity.append(np.mean(l[0:idx+1]))
             # Calculates the mean of all the peaks which were true till that frame 
