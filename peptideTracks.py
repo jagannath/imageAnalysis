@@ -34,6 +34,7 @@ def makeIntensityCategory(trackFile,ch=1):
     query_channel = 'ch'+str(ch)
     print "Processing Channel : ",query_channel
     category_trackDetails_dict = collections.defaultdict(list)
+    category_peakDetails_dict = collections.defaultdict(list) 
     ifile = open(trackFile,'r')
     lines = ifile.readlines()
     ifile.close()
@@ -41,11 +42,17 @@ def makeIntensityCategory(trackFile,ch=1):
         [catStr] = re.findall(r"\(.+\)",line)
         channel = line.split(',')[0]
         if channel == query_channel:
-            category_tup = eval(catStr)
+	    xy = int(line.split(',')[1])
+	    hStr,wStr = line.split(',')[2], line.split(',')[3]
+	    if hStr == 'None': hStr = 0
+	    if wStr == 'None': wStr = 0
+	    h, w = map(int, [float(hStr),float(wStr)])		
+	    category_tup = eval(catStr)
 	    intensity_split = re.findall('\)",[-|\d]\d*.*',line.strip())[0]
 	    intensityList = map(float,intensity_split.split(',')[1:])
 	    category_trackDetails_dict[category_tup].append(intensityList) 
-    return category_trackDetails_dict    
+	    category_peakDetails_dict[category_tup].append((xy, (h,w),intensityList))
+    return category_trackDetails_dict,category_peakDetails_dict    
 
 
 def getIntensityList_category(db,desired_categoryList):
@@ -73,26 +80,48 @@ def getDesiredCategory(category_type='staggered',nbrFrames=7):
 	    desired_category = [[True]*(i+1) + [False]*(nbrFrames-i) for i in range(nbrFrames+1)]
     return desired_category
 
-def writeCountsFile(desired_category_details_chList,destDir):
+def applyCutoff(desired_categoryList,desired_category,q_range,cycle=3):
+	category = tuple(desired_category[cycle])
+	cutoff_intensityList = np.array(desired_categoryList[cycle][2])
+	q1_intensity = np.percentile(cutoff_intensityList,q_range[0])
+	q2_intensity = np.percentile(cutoff_intensityList,q_range[1])
+	trackCounts = list()
+	for cat,counts,intensityList in desired_categoryList:
+		intensity_cutoffList = [item for item in intensityList if item > q1_intensity and item < q2_intensity]
+		trackCounts.append([cat,len(intensity_cutoffList),intensity_cutoffList])
+	return trackCounts
+
+def writeCountsFile(desired_category_details_chList,destDir,nbrchannels):
     """
     @ function : Outputs the list of counts for each of the category (desired) and the mean of the mean intensity of the peaks
     @ return   : outputfile name
     """
+    if nbrchannels == 2:
+	    category_details_list_ch1 = desired_category_details_chList[0]
+	    category_details_list_ch2 = desired_category_details_chList[1]
+	    ofname = os.path.join(destDir,'category_counts.traditional.tab')
+	    ofile = open(ofname,'w')
+	    ofile.write('Category \t Counts \t Mean Intensity \n')
+	    ofile.write('CHANNEL 1 \n')
+	    print "Processing ch1"
+	    for category,counts,intensityList in category_details_list_ch1:
+        	ofile.write(str(category)+'\t'+str(counts)+ '\t' + str(np.mean(intensityList))+'\n')
+	    ofile.write('CHANNEL 2 \n')
+	    print "Processing ch2"
+	    for category,counts,intensityList in category_details_list_ch2:
+        	ofile.write(str(category)+'\t'+str(counts)+'\t' + str(np.mean(intensityList))+'\n')
+	    ofile.close()
 
-    category_details_list_ch1 = desired_category_details_chList[0]
-    category_details_list_ch2 = desired_category_details_chList[1]
-    ofname = os.path.join(destDir,'category_counts.traditional.tab')
-    ofile = open(ofname,'w')
-    ofile.write('Category \t Counts \t Mean Intensity \n')
-    ofile.write('CHANNEL 1 \n')
-    print "Processing ch1"
-    for category,counts,intensityList in category_details_list_ch1:
-        ofile.write(str(category)+'\t'+str(counts)+ '\t' + str(np.mean(intensityList))+'\n')
-    ofile.write('CHANNEL 2 \n')
-    print "Processing ch2"
-    for category,counts,intensityList in category_details_list_ch2:
-        ofile.write(str(category)+'\t'+str(counts)+'\t' + str(np.mean(intensityList))+'\n')
-    ofile.close()
+    else:
+	    category_details_list_ch1 = desired_category_details_chList[0]
+	    ofname = os.path.join(destDir,'category_counts.traditional.tab')
+	    ofile = open(ofname,'w')
+	    ofile.write('Category \t Counts \t Mean Intensity \n')
+	    ofile.write('CHANNEL 1 \n')
+	    print "Processing ch1"
+	    for category,counts,intensityList in category_details_list_ch1:
+        	ofile.write(str(category)+'\t'+str(counts)+ '\t' + str(np.mean(intensityList))+'\n')
+	    ofile.close()
     return ofname
 
 def calculateEdmanEfficiency(countList,edmanframe,calcType='aboveDecay'):

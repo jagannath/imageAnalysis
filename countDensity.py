@@ -84,9 +84,6 @@ def summarize_fld(dateStamp,pathDir,destDir,typeVal='count'):
     
     pattern = "*fld*.tif.png*.pkl"
     allfPkl = locate(pattern, pathDir)
-    print pattern, pathDir
-    print len(allfPkl)
-    sys.exit(1)
 
     fList = [f for f in allfPkl if not _skip(f)]
 	

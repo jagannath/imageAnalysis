@@ -120,11 +120,6 @@ class ImageStack:
 
 
 
-
-
-
-
-
 def test():
     pathDir = "/project2/marcotte/boulgakov/microscope/2015-Jan/2015-01-01"
     subDir = "150101_DiAS2_PR011_2nM_Mock1_TFA1h_A_Both_tflds002"

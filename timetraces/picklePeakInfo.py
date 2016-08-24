@@ -144,9 +144,10 @@ def analyzeFrames(sourceDir,outputDir,peakFilePath):
     # peakFile is the '.pkl' filepath which contains the peak information after image processing. 
     # an output directory structure is created based on the file name
     peak_dict = loadPkl(peakFilePath)
-
+   
     peakFile = os.path.split(peakFilePath)[1]
-    traceDir_name = peakFile.split('.')[0]
+    traceDir_name = peakFile.split('.')[0][:-4]# This is a hack you may have to do
+
     traceDir = os.path.join(sourceDir,traceDir_name)
     print "Analyzing directory ",traceDir_name,"...",len(peak_dict)
 
@@ -182,7 +183,6 @@ def analyzeFrames(sourceDir,outputDir,peakFilePath):
 
 
 
-# In[110]:
 
 
 

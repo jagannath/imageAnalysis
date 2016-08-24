@@ -48,8 +48,7 @@ def colocalizeImages(dateStamp,pathDir,destDir):
     pklFname = os.path.join(processed_dir,dateStamp + '_colocalize.pkl')
     ofile = open(pklFname,'w')
     subDir_colocal_dict = collections.defaultdict(list)
-
-    allSubDir = [x[0] for x in os.walk(pathDir) if not x[0].endswith('PKL')]
+    allSubDir = [os.path.join(pathDir,d) for d in os.walk(pathDir).next()[1] if d.startswith('16')] #Dirty exception
     for subDir in allSubDir:
         print "Processing directory %s ..."%(subDir)
         f = str()
@@ -62,15 +61,14 @@ def colocalizeImages(dateStamp,pathDir,destDir):
             suf = ".".join(pklF.split('.')[1:])
             pre = pklF.split('.')[0]
             if pre.endswith('c1'):
-                for nbr in range( 1,5):
+                for nbr in range( 1,6):
                     f = pre[:-2]+'c'+str(nbr)+'.'+suf
                     if os.path.isfile(f): file_list.append(f)
-                    else: 
+                    else:
                         file_couple = list(itertools.combinations(file_list,2))
                         allFile_pairs.append(file_couple)
                         break
             else: raise SystemExit("Need atleast two files to compare")
-            
         for subDir_list in allFile_pairs:
             for f1,f2 in subDir_list:
                 colocal = Colocalize(f1,f2)
@@ -155,7 +153,7 @@ if __name__ == '__main__':
     if microscope is 1:                                                                                                                     
         sourceDir = "/project/boulgakov/microscope"                                                                                         
         pathDir = os.path.join(sourceDir,monthStamp,dateStamp)                                                                                  
-        destDir = os.path.join("/project/current/project2/jaggu/dataAnalysis/microscope1",monthStamp,dateStamp)     
+        destDir = os.path.join("/project/jagannath/projectfiles/singleMoleculeMicroscopy/dataAnalysis/microscope1",monthStamp,dateStamp)     
     elif microscope is 2:                                                                                                                   
         sourceDir = "/project/boulgakov/microscope2/jagannath/rawFiles"                                                                     
         pathDir = os.path.join(sourceDir,monthStamp,dateStamp)                                                                              

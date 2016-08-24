@@ -36,14 +36,15 @@ def makeImageList_flds(dateStamp,pathDir):
     return True
 
 
+def makeProjection_stack(dateStamp,pathDir,stackType='tflds'):
+    if stackType == 'tflds':  ofname = os.path.join(pathDir,'targetImages_list.tflds.txt')
+    else: ofname = os.path.join(pathDir,'targetImages_list.trace.txt')
 
-def makeProjection_tflds(dateStamp,pathDir):
-    ofname = os.path.join(pathDir,'targetImages_list.tflds.txt')
     ofile = open(ofname,'w')
     img_pathList = list()
     
     for subDir in next(os.walk(pathDir))[1]:
-        if 'tflds' in subDir:
+        if stackType in subDir:
             subDirPath = os.path.join(pathDir,subDir)
             if 'both' in subDir or 'Both' in subDir:
                 for ch in [1,2]:
@@ -74,7 +75,7 @@ if __name__ == '__main__':
     monthIs =  {'01':'Jan','05':'May','06':'June','07':'July','08':'Aug','09':'Sept','10':'Oct','11':'Nov','12':'Dec'}
 
     [ARG,dateStamp] = sys.argv[1:]
-    sourceDir = '/project2/marcotte/boulgakov/microscope'
+    sourceDir = '/home/jaggu/marcotte_project/boulgakov/microscope'
     month = monthIs[dateStamp.split('-')[1]]
     year = dateStamp.split('-')[0]
     pathDir = os.path.join(sourceDir,year+'-'+month,dateStamp)
@@ -82,8 +83,12 @@ if __name__ == '__main__':
     t0 = time.clock()
     if ARG == 'TFLDS':
         print "Creating Maximum Projection images and Offset Dictionary ..."
-        makeProjection_tflds(dateStamp,pathDir)
+        makeProjection_stack(dateStamp,pathDir,'tflds')
         print "Making Image list for peak fitting"
+    elif ARG == 'TRACE':
+        print "Creating Maximum Projection images for the time trace ..."
+        makeProjection_stack(dateStamp,pathDir,'trace')
+    
     elif ARG == 'FLDS':
         print "Finding only images for FLDS and not TFLDS"
         makeImageList_flds(dateStamp,pathDir)

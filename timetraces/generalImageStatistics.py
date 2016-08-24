@@ -57,10 +57,7 @@ def fit_exp_linear(t, y, C = 0):
     A = np.exp(A_log)
     y_fit = model_func(t, A, K, C)
     rmse = np.sqrt(((y_fit - y0) ** 2).mean())
-    return (A,
-     K,
-     y_fit,
-     rmse)
+    return (A, K, y_fit, rmse)
 
 
 def computeFrameONs(pklPath):
@@ -90,6 +87,7 @@ def plot_pbleaching(frameCounts, trace_outputDir):
         A, K, y_fit, rmse = fit_exp_linear(t, y)
         plt.plot(t, y, ls='None', marker='o', markerfacecolor='#0072B2', markersize=6)
         plt.plot(t, y_fit, color='#E69F00', linewidth=2)
+	plt.ylim(ymin=0)
         plt.xlabel('Frames')
         plt.ylabel('Number of peptides ON')
         if norm:
@@ -97,7 +95,7 @@ def plot_pbleaching(frameCounts, trace_outputDir):
         else:
             fname1 = 'pbleaching'
         plt.savefig(os.path.join(pbleach_outputDir, fname1 + '.svg'))
-        plt.savefig(os.path.join(pbleach_outputDir, fname1 + '.png'))
+        plt.savefig(os.path.join(pbleach_outputDir, fname1 + '.jpg'))
         plt.close()
         return (A, K, rmse)
 
@@ -131,7 +129,10 @@ def pickle_peakONs(peakONCounts, frames_tillOff, pklPath):
 
 
 def analyze_pbleaching(traceFile, outputDir):
-    trace_outputDir = os.path.join(outputDir, traceFile + '_first_output')
+    # traceFile - the name of the subDir containing the directory to process 
+    print "Analyzing photobleaching for ",traceFile, "..."
+    #trace_outputDir = os.path.join(outputDir, traceFile + '_first_output')
+    trace_outputDir = os.path.join(outputDir, traceFile + '_tif_output')
     pklPath = os.path.join(trace_outputDir, 'pklFiles')
     frameCounts, peakONCounts, frames_tillOff = computeFrameONs(pklPath)
     plot_pbleaching(frameCounts, trace_outputDir)
