@@ -157,7 +157,7 @@ class ExtractPeakImages:
         new_h, new_w = _getClosest((h0,w0),allPeakPos)
         return new_h, new_w
 
-    def getImageBox(self, imagePath,offset,title,cycle, boxsize=12):
+    def getImageBox(self, imagePath,offset,title,cycle, intensityScaling, cropsize):
         """ Crops the image to the appropriate boxsize and rescales to a defined
         value. In further experiments,I will tinker with the intensity scaling
         to match the first of the images """
@@ -165,9 +165,7 @@ class ExtractPeakImages:
         destDir = self.destDir
         ch = self.ch
         h, w = map(float, [self.h0, self.w0])
-        if ch == 2: intensity_scale = ( 2000, 10000)
-        else: intensity_scale = ( 300, 1000)
-        v_min, v_max = intensity_scale
+        v_min, v_max = intensityScaling
 
         orig, corig, cimg = openImage(imagePath)
         
@@ -176,8 +174,8 @@ class ExtractPeakImages:
 
         h_exact, w_exact = self.getExactPosition(new_h, new_w, imagePath)
 
-        crop_image = orig[h_exact-(boxsize/2):h_exact+1+(boxsize/2),w_exact-(boxsize/2):w_exact+1+(boxsize/2)]
-        lowerleft = (-5 + boxsize/2,-5 + boxsize/2)
+        crop_image = orig[h_exact-(cropsize/2):h_exact+1+(cropsize/2),w_exact-(cropsize/2):w_exact+1+(cropsize/2)]
+        lowerleft = (-5 + cropsize/2,-5 + cropsize/2)
 
         # Drawing figure
         fig = plt.figure(figsize=(3,3),dpi=300)
@@ -197,7 +195,7 @@ class ExtractPeakImages:
         plt.close()
 
 
-def test(ch,fld,h,w,fpattern,offset_fpath,sourceDir,destDir):
+def main(ch,fld,h,w,fpattern,offset_fpath,sourceDir,destDir,intensityScaling,cropsize):
     p = ExtractPeakImages(ch,fld,(h,w),fpattern,offset_fpath,sourceDir,destDir)
     cycle_imagePath_dict = p.get_allImagePath()
     cycle_offset_dict = p.get_allOffsets()
@@ -205,14 +203,14 @@ def test(ch,fld,h,w,fpattern,offset_fpath,sourceDir,destDir):
     for cycle, imagePath in cycle_imagePath_dict.items():
         title = 'cycle'+str(cycle)+'_ch'+str(ch)+'_fld'+str(fld)+'_hw'+str((h,w))
         imagePath, offset = cycle_imagePath_dict[cycle], cycle_offset_dict[cycle]
-        p.getImageBox(imagePath, offset, title, cycle)
+        p.getImageBox(imagePath, offset, title, cycle,intensityScaling,cropsize)
         
 
 
 
 
 parser = argparse.ArgumentParser(description="""This script extracts the images surrounding the peaks. \n Saves the images in png and svg format \n
-Example : ./project/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis/extractPeakImages.py \n --file_pattern "160806_4Mock_10ImageEdman_OSS_Both_Gold_Cycles*" --offset_file output160808/offsets_dict_oblzb6.pkl -c 2 -fld 51 -hw 400 192
+Example : /project/jagannath/projectfiles/proteomics_single_molecule/imageAnalysis/extractPeakImages.py --file_pattern "2016_08_20_JSP045025_0*" --offset_file out_a02_hat_5_4/offsets_dict_ocbbvj.pkl \n --output_directory tempOutput \n --intensity_scaling 300 1000 --crop_size 24 -c 1 -fld 73 -hw 231 242 
                                  """)
 
 parser.add_argument('-c','--channel',action="store",dest="ch",default=2,type=int,\
@@ -229,6 +227,10 @@ parser.add_argument('--header_directory',action="store",dest="sourceDir",default
                     help="This is the source directory to start searching the pattern from ")
 parser.add_argument('--output_directory',action="store",dest="destDir",default="extractedPeakImages",type=str,
                     help="Destination directory where the images are saved. ")
+parser.add_argument('--intensity_scaling',action="store",dest="intensityScaling",nargs=2,default=[200,1000],
+                    help="Intensity range to be used for scaling the final image")
+parser.add_argument('--crop_size',action="store",dest="cropsize",default=12,type=int,
+                    help="Size (pixels) to be cropped around the peak")
 
 args = parser.parse_args()
 
@@ -247,7 +249,10 @@ destDir = os.path.abspath(args.destDir)
 peakInfo = 'ch-'+str(ch)+'_fld-'+str(fld)+'_hw-'+str(h)+'_'+str(w)
 destDir = os.path.join(destDir,peakInfo)
 makeDir(destDir)
+intensityScaling = map(int,args.intensityScaling)
+cropsize = args.cropsize
 
-test(ch,fld,h,w,fnamePattern,offset_fpath,sourceDir,destDir)
+
+main(ch,fld,h,w,fnamePattern,offset_fpath,sourceDir,destDir,intensityScaling,cropsize)
 
 

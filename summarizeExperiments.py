@@ -1,4 +1,4 @@
-#! /home/jaggu/anaconda
+#!/home/jaggu/anaconda/bin/python
 
 """
 Combing all the summarizing scripts to make something more consistent and huge file
@@ -39,7 +39,7 @@ if cdensity.testImport(): print "Import Successful"
 else: raise SystemExit("Import error of countDensity. Quiting ..")
 
 def getDirectory(hostname,dateStamp,microscopeNbr):
-    month = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr', '05':'May', '06':'June','07':'July','08':'Aug','10':'Oct','11':'Nov','12':'Dec'}
+    month = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr', '05':'May', '06':'June','07':'July','08':'Aug','09':'Sept', '10':'Oct','11':'Nov','12':'Dec'}
     #[ARG, dateStamp] = sys.argv[1:]
     yearStamp = dateStamp.split('-')[0]
     monthStamp = yearStamp+"-"+month[dateStamp.split('-')[1]]

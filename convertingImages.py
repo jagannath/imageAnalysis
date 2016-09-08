@@ -144,7 +144,21 @@ def rescaleStitchImage(imgDir,destDir):
     print outputSTITCH 
     return True
 
+def makeDir(d):
+    if not os.path.exists(d): os.makedirs(d)
+    return d
 
+
+def tempFunction():
+    sourceDir = '/home/jaggu/marcotte_project/boulgakov/microscope/2016-July/2016-07-21t/before_after'
+    destDir = os.path.join(sourceDir,'convertedImages')
+    makeDir(destDir)
+
+    all_subDir = [d for d in os.walk(sourceDir).next()[1] if not d.endswith('trace') ]
+
+    for subDir in all_subDir:
+        convertDir(subDir)
+    return True
 
 
 """

@@ -55,6 +55,71 @@ def get_stepCounts(signal_dict):
             twoStepCounts_list.append([drops,counts])
     return oneStepCounts_list, twoStepCounts_list
 
+def heatMap_oneStep(oneStepCounts_list):
+    """ Creates a heat map for single drop array """ 
+    # Loading labels
+    nbrEdman = args.nbrEdman
+    nbrMock = args.nbrMock
+    nbrOmit = args.nbrOmit
+    sequence = args.sequence
+    channel = args.channel
+    
+    nrows = (nbrMock - nbrOmit) + nbrEdman + 1 
+    oneDrops_mat = np.zeros([2,nrows])
+    oneDrops_mat[0:1]=1 
+    
+    for drops, counts in oneStepCounts_list:
+        dropPos = drops[0][0][1]
+        oneDrops_mat[1,dropPos] = counts
+
+    if channel is 1:
+	cmap_color = 'YlOrRd'
+	channelColor = "561"
+
+    if channel is 2:
+        cmap_color = 'YlGnBu'
+	channelColor = "647"
+    
+    fig, ax = plt.subplots()
+    heatmap_array = oneDrops_mat
+
+    mockLabel = ['M'+str(item+1) for item in range((nbrMock-nbrOmit))]
+    lowerEdman = nbrMock - nbrOmit
+    upperEdman = lowerEdman + nbrEdman
+    edmanLabel = ['E' + str(item+1) for item in range(nbrEdman)]
+    labels = mockLabel + edmanLabel
+    
+    text_limit = np.amax(heatmap_array)
+    for (i,j),counts in np.ndenumerate(heatmap_array):
+        if counts > (text_limit)*0.75: textColor = 'white'
+        else: textColor = 'black'
+        ax.text(0,i, '{:0.0f}'.format(counts),ha='center',va='center',color=textColor)
+    
+    # Color map changing accordingly
+    count_min = np.amin(heatmap_array)
+    count_max = np.amax(heatmap_array)
+    #ax.matshow(heatmap_array)
+    cax = ax.matshow(heatmap_array,cmap=cmap_color,vmin=count_min,vmax=count_max)
+    fig.colorbar(cax)
+    
+#    ax.set_xticks(range(nrows))
+#    ax.set_yticks(range(nrows))
+#    ax.set_xticklabels(labels)
+#    ax.set_yticklabels(labels)
+    title = 'Double drop' + '('+channelColor+'):'+ sequence
+#    ax.set_title(title)
+    fname = os.path.join(destDir,title+'_'+channelColor+'_oneStepDrops')
+
+    plt.savefig(fname+'.png')                                             
+    plt.savefig(fname+'.svg')
+    plt.close()
+
+    print "done", fname
+
+
+
+
+
 def heatMap_twoStep(twoStepCounts_list):
     """ Creates a heat map in the signal_analysis directory"""
     # Loading labels
@@ -81,7 +146,11 @@ def heatMap_twoStep(twoStepCounts_list):
     
     fig, ax = plt.subplots()
     heatmap_array = twoDrops_mat[1:,1:]
-    labels = ['E'+str(item+1) for item in range(nrows-1)]
+    mockLabel = ['M'+str(item+2) for item in range((nbrMock-nbrOmit))]
+    lowerEdman = nbrMock - nbrOmit
+    upperEdman = lowerEdman + nbrEdman
+    edmanLabel = ['E' + str(item+1) for item in range(nbrEdman)]
+    labels = mockLabel + edmanLabel
     #labels.extend('R')
     text_limit = np.amax(heatmap_array)
     for (i,j),counts in np.ndenumerate(heatmap_array):
@@ -89,7 +158,6 @@ def heatMap_twoStep(twoStepCounts_list):
         else: textColor = 'black'
         ax.text(j,i, '{:0.0f}'.format(counts),ha='center',va='center',color=textColor)
     
-
     # Color map changing accordingly
     count_min = np.amin(heatmap_array)
     count_max = np.amax(heatmap_array)
@@ -113,7 +181,6 @@ def heatMap_twoStep(twoStepCounts_list):
 
 
 
-
 parser = argparse.ArgumentParser(description="""This is the script meant to summarize the results from "track_photometries_NO_NONES*csv_ch2_SIGNALS.pkl""")
 #parser.add_argument('--signal_file','-f', action="store", dest='signal_file',type=str)
 parser.add_argument('signal_file',action="store",type=str)
@@ -121,7 +188,7 @@ parser.add_argument('--mock','-m',action="store",dest="nbrMock",type=int,default
 parser.add_argument('--omit','-o',action="store",dest="nbrOmit",type=int,default=4)
 parser.add_argument('--edman','-e',action="store",dest="nbrEdman",type=int,default=4)
 parser.add_argument('--channel','-c',action="store",dest="channel",type=int,default=2)
-parser.add_argument('--sequence','-s',action="store",dest="sequence",type=str,default="Peptide")
+parser.add_argument('--sequence','-s',action="store",dest="sequence",type=str,default="PEPTIDE")
 args = parser.parse_args()
 
 signal_filepath = os.path.abspath(args.signal_file)
@@ -137,8 +204,8 @@ sequence = args.sequence
 
 oneStepCounts_list, twoStepCounts_list = get_stepCounts(signal_dict) 
 
-#heatMap_oneStep(oneStepCounts_list)
-heatMap_twoStep(twoStepCounts_list)
+heatMap_oneStep(oneStepCounts_list)
+#heatMap_twoStep(twoStepCounts_list)
 
 
 
